@@ -1,4 +1,4 @@
-const CACHE_NAME = 'qrbeam-v3';
+const CACHE_NAME = 'qrbeam-v3.1.0';
 const ASSETS = [
   './',
   './index.html',

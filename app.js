@@ -1,6 +1,6 @@
 /**
- * QRBeam v3.0.0 - Wi-Fi P2P & Optical Data Transfer Engine
- * Features: Instant Wi-Fi PeerConnection via 4-digit code or 1-scan QR, with simple B&W optical QR fallback.
+ * QRBeam v3.1.0 - Multi-Modal Data Transfer Engine
+ * Modes: Wi-Fi P2P (1-Second), Optical QR Stream (Visual), Acoustic Audio Modem (Sound Tones)
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -12,12 +12,16 @@ class QRBeamApp {
   constructor() {
     this.currentView = 'home-view';
     
+    // Transmission Mode: 'qr' | 'audio' | 'wifi'
+    this.transmissionMode = 'qr';
+    this.receiverMode = 'camera'; // 'camera' | 'audio'
+
     // Sender State
-    this.senderMode = 'file';
+    this.senderPayloadType = 'file';
     this.selectedFile = null;
     this.selectedFileBuffer = null;
     this.linkText = '';
-    this.senderFps = 10;
+    this.senderFps = 12;
     this.senderChunkSize = 256;
     this.senderPackets = [];
     this.senderCurrentIndex = 0;
@@ -25,6 +29,24 @@ class QRBeamApp {
     this.senderTimerId = null;
     this.senderLastFrameTime = 0;
     this.pairCode = '';
+    this.senderPayloadP2P = null;
+
+    // Web Audio Modem Transmitter State
+    this.audioCtx = null;
+    this.isAudioTransmitting = false;
+    this.audioTxOscillator = null;
+    this.audioTxGain = null;
+    this.audioAnimId = null;
+
+    // Web Audio Modem Receiver State
+    this.audioRxCtx = null;
+    this.audioRxStream = null;
+    this.audioRxAnalyser = null;
+    this.isAudioReceiving = false;
+    this.audioRxAnimId = null;
+    this.audioDemodBuffer = [];
+    this.audioLastBitTime = 0;
+    this.audioCurrentPacketBits = [];
 
     // PeerJS P2P State
     this.peer = null;
@@ -58,6 +80,7 @@ class QRBeamApp {
     this.initQRWorker();
     this.bindEvents();
     this.handleRouting();
+    this.generateSenderPairCode();
   }
 
   /* NATIVE GZIP COMPRESSION */
@@ -159,15 +182,40 @@ class QRBeamApp {
     this.dom.compressionBadge = document.getElementById('compression-badge');
     this.dom.compressionText = document.getElementById('compression-text');
 
-    this.dom.pairCodeVal = document.getElementById('pair-code-val');
-    this.dom.modeWifiDirect = document.getElementById('mode-wifi-direct');
-    this.dom.modeOpticalStream = document.getElementById('mode-optical-stream');
-    this.dom.btnStartBeam = document.getElementById('btn-start-beam');
+    // Transmission Modes
+    this.dom.modeSelectQr = document.getElementById('mode-select-qr');
+    this.dom.modeSelectAudio = document.getElementById('mode-select-audio');
+    this.dom.modeSelectWifi = document.getElementById('mode-select-wifi');
 
+    // Sliders & Presets
+    this.dom.sliderFpsContainer = document.getElementById('slider-fps-container');
+    this.dom.labelSpeedControl = document.getElementById('label-speed-control');
+    this.dom.sliderFps = document.getElementById('slider-fps');
+    this.dom.valFps = document.getElementById('val-fps');
+    this.dom.sliderChunkContainer = document.getElementById('slider-chunk-container');
+    this.dom.sliderChunkSize = document.getElementById('slider-chunk-size');
+    this.dom.valChunkSize = document.getElementById('val-chunk-size');
+
+    this.dom.presetMobileFast = document.getElementById('preset-mobile-fast');
+    this.dom.presetBalanced = document.getElementById('preset-balanced');
+    this.dom.presetDense = document.getElementById('preset-dense');
+    this.dom.presetAudioModem = document.getElementById('preset-audio-modem');
+
+    this.dom.pairCodeVal = document.getElementById('pair-code-val');
+    this.dom.senderP2pCard = document.getElementById('sender-p2p-card');
+    this.dom.btnStartBeam = document.getElementById('btn-start-beam');
+    this.dom.btnStartText = document.getElementById('btn-start-text');
+
+    // Display Stages
     this.dom.senderStatus = document.getElementById('sender-status');
     this.dom.senderChunkBadge = document.getElementById('sender-chunk-badge');
+    this.dom.senderQrStage = document.getElementById('sender-qr-stage');
     this.dom.qrCanvas = document.getElementById('qr-canvas');
     this.dom.qrPlaceholder = document.getElementById('qr-placeholder');
+    this.dom.senderAudioStage = document.getElementById('sender-audio-stage');
+    this.dom.audioSenderCanvas = document.getElementById('audio-sender-canvas');
+    this.dom.audioTxFreqLabel = document.getElementById('audio-tx-freq-label');
+
     this.dom.senderProgressFill = document.getElementById('sender-progress-fill');
     this.dom.senderProgressText = document.getElementById('sender-progress-text');
     this.dom.senderTimeEst = document.getElementById('sender-time-est');
@@ -177,17 +225,26 @@ class QRBeamApp {
     this.dom.btnPrevChunk = document.getElementById('btn-prev-chunk');
     this.dom.btnNextChunk = document.getElementById('btn-next-chunk');
 
+    // Receiver Elements
+    this.dom.recModeCamera = document.getElementById('rec-mode-camera');
+    this.dom.recModeAudio = document.getElementById('rec-mode-audio');
     this.dom.inputPairCode = document.getElementById('input-pair-code');
     this.dom.btnConnectCode = document.getElementById('btn-connect-code');
 
-    this.dom.cameraSelect = document.getElementById('camera-select');
+    this.dom.cameraViewfinderBox = document.getElementById('camera-viewfinder-box');
     this.dom.scannerVideo = document.getElementById('scanner-video');
     this.dom.scannerCanvas = document.getElementById('scanner-canvas');
     this.dom.cameraPlaceholder = document.getElementById('camera-placeholder');
     this.dom.btnStartCamera = document.getElementById('btn-start-camera');
     this.dom.btnStopCamera = document.getElementById('btn-stop-camera');
+
+    this.dom.audioRxBox = document.getElementById('audio-rx-box');
+    this.dom.audioRxCanvas = document.getElementById('audio-rx-canvas');
+    this.dom.audioRxPlaceholder = document.getElementById('audio-rx-placeholder');
+    this.dom.btnStartAudioRx = document.getElementById('btn-start-audio-rx');
+    this.dom.btnStopAudioRx = document.getElementById('btn-stop-audio-rx');
+
     this.dom.receiverStatus = document.getElementById('receiver-status');
-    
     this.dom.recFilename = document.getElementById('rec-filename');
     this.dom.recFilesize = document.getElementById('rec-filesize');
     this.dom.recChunksCount = document.getElementById('rec-chunks-count');
@@ -219,8 +276,8 @@ class QRBeamApp {
       });
     });
 
-    if (this.dom.modeFileBtn) this.dom.modeFileBtn.addEventListener('click', () => this.setSenderMode('file'));
-    if (this.dom.modeLinkBtn) this.dom.modeLinkBtn.addEventListener('click', () => this.setSenderMode('link'));
+    if (this.dom.modeFileBtn) this.dom.modeFileBtn.addEventListener('click', () => this.setSenderPayloadType('file'));
+    if (this.dom.modeLinkBtn) this.dom.modeLinkBtn.addEventListener('click', () => this.setSenderPayloadType('link'));
 
     if (this.dom.dropZone) {
       this.dom.dropZone.addEventListener('click', (e) => {
@@ -252,10 +309,51 @@ class QRBeamApp {
       });
     }
 
+    // Transmission Mode Selectors
+    if (this.dom.modeSelectQr) this.dom.modeSelectQr.addEventListener('click', () => this.setTransmissionMode('qr'));
+    if (this.dom.modeSelectAudio) this.dom.modeSelectAudio.addEventListener('click', () => this.setTransmissionMode('audio'));
+    if (this.dom.modeSelectWifi) this.dom.modeSelectWifi.addEventListener('click', () => this.setTransmissionMode('wifi'));
+
+    // Sliders
+    if (this.dom.sliderFps) {
+      this.dom.sliderFps.addEventListener('input', (e) => {
+        this.senderFps = parseInt(e.target.value, 10);
+        this.dom.valFps.innerText = `${this.senderFps} FPS`;
+      });
+    }
+
+    if (this.dom.sliderChunkSize) {
+      this.dom.sliderChunkSize.addEventListener('input', (e) => {
+        this.senderChunkSize = parseInt(e.target.value, 10);
+        this.dom.valChunkSize.innerText = `${this.senderChunkSize} Bytes`;
+        if (this.senderPackets.length > 0) {
+          this.prepareSenderPayload();
+        }
+      });
+    }
+
+    // Presets
+    if (this.dom.presetMobileFast) {
+      this.dom.presetMobileFast.addEventListener('click', () => this.applyPreset(128, 10, 'qr', this.dom.presetMobileFast));
+    }
+    if (this.dom.presetBalanced) {
+      this.dom.presetBalanced.addEventListener('click', () => this.applyPreset(256, 12, 'qr', this.dom.presetBalanced));
+    }
+    if (this.dom.presetDense) {
+      this.dom.presetDense.addEventListener('click', () => this.applyPreset(512, 15, 'qr', this.dom.presetDense));
+    }
+    if (this.dom.presetAudioModem) {
+      this.dom.presetAudioModem.addEventListener('click', () => this.applyPreset(64, 8, 'audio', this.dom.presetAudioModem));
+    }
+
     if (this.dom.btnStartBeam) this.dom.btnStartBeam.addEventListener('click', () => this.prepareSenderPayload());
     if (this.dom.btnTogglePlay) this.dom.btnTogglePlay.addEventListener('click', () => this.toggleSenderPlay());
     if (this.dom.btnPrevChunk) this.dom.btnPrevChunk.addEventListener('click', () => this.stepSenderChunk(-1));
     if (this.dom.btnNextChunk) this.dom.btnNextChunk.addEventListener('click', () => this.stepSenderChunk(1));
+
+    // Receiver Modes
+    if (this.dom.recModeCamera) this.dom.recModeCamera.addEventListener('click', () => this.setReceiverMode('camera'));
+    if (this.dom.recModeAudio) this.dom.recModeAudio.addEventListener('click', () => this.setReceiverMode('audio'));
 
     if (this.dom.btnConnectCode) this.dom.btnConnectCode.addEventListener('click', () => this.connectViaPairCode());
     if (this.dom.inputPairCode) {
@@ -266,12 +364,83 @@ class QRBeamApp {
 
     if (this.dom.btnStartCamera) this.dom.btnStartCamera.addEventListener('click', () => this.startCamera());
     if (this.dom.btnStopCamera) this.dom.btnStopCamera.addEventListener('click', () => this.stopCamera());
-    if (this.dom.cameraSelect) this.dom.cameraSelect.addEventListener('change', () => this.switchCamera());
+
+    if (this.dom.btnStartAudioRx) this.dom.btnStartAudioRx.addEventListener('click', () => this.startAudioReceiver());
+    if (this.dom.btnStopAudioRx) this.dom.btnStopAudioRx.addEventListener('click', () => this.stopAudioReceiver());
+
     if (this.dom.btnResetSession) this.dom.btnResetSession.addEventListener('click', () => this.resetReceiverSession());
     if (this.dom.btnCopyLink) this.dom.btnCopyLink.addEventListener('click', () => this.copyLinkToClipboard());
   }
 
-  /* ROUTING & URL PARAMS */
+  applyPreset(chunkSize, fps, mode, activeBtn) {
+    [this.dom.presetMobileFast, this.dom.presetBalanced, this.dom.presetDense, this.dom.presetAudioModem].forEach(btn => {
+      if (btn) btn.classList.remove('active');
+    });
+    if (activeBtn) activeBtn.classList.add('active');
+
+    this.senderChunkSize = chunkSize;
+    this.senderFps = fps;
+
+    if (this.dom.sliderChunkSize) {
+      this.dom.sliderChunkSize.value = chunkSize;
+      this.dom.valChunkSize.innerText = `${chunkSize} Bytes`;
+    }
+
+    if (this.dom.sliderFps) {
+      this.dom.sliderFps.value = fps;
+      this.dom.valFps.innerText = `${fps} FPS`;
+    }
+
+    this.setTransmissionMode(mode);
+
+    if (this.senderPackets.length > 0) {
+      this.prepareSenderPayload();
+    }
+  }
+
+  setTransmissionMode(mode) {
+    this.transmissionMode = mode;
+
+    [this.dom.modeSelectQr, this.dom.modeSelectAudio, this.dom.modeSelectWifi].forEach(btn => {
+      if (btn) btn.classList.remove('active');
+    });
+
+    if (mode === 'qr' && this.dom.modeSelectQr) {
+      this.dom.modeSelectQr.classList.add('active');
+      this.dom.senderQrStage.style.display = 'flex';
+      this.dom.senderAudioStage.style.display = 'none';
+      this.dom.btnStartText.innerText = 'Start Optical Transmission';
+    } else if (mode === 'audio' && this.dom.modeSelectAudio) {
+      this.dom.modeSelectAudio.classList.add('active');
+      this.dom.senderQrStage.style.display = 'none';
+      this.dom.senderAudioStage.style.display = 'flex';
+      this.dom.btnStartText.innerText = 'Start Audio Modem Broadcast';
+    } else if (mode === 'wifi' && this.dom.modeSelectWifi) {
+      this.dom.modeSelectWifi.classList.add('active');
+      this.dom.senderQrStage.style.display = 'flex';
+      this.dom.senderAudioStage.style.display = 'none';
+      this.dom.btnStartText.innerText = 'Start Wi-Fi P2P Broadcast';
+    }
+  }
+
+  setReceiverMode(mode) {
+    this.receiverMode = mode;
+    if (mode === 'camera') {
+      this.dom.recModeCamera.classList.add('active');
+      this.dom.recModeAudio.classList.remove('active');
+      this.dom.cameraViewfinderBox.style.display = 'flex';
+      this.dom.audioRxBox.style.display = 'none';
+      this.stopAudioReceiver();
+    } else {
+      this.dom.recModeCamera.classList.remove('active');
+      this.dom.recModeAudio.classList.add('active');
+      this.dom.cameraViewfinderBox.style.display = 'none';
+      this.dom.audioRxBox.style.display = 'flex';
+      this.stopCamera();
+    }
+  }
+
+  /* ROUTING */
   handleRouting() {
     const hash = window.location.hash.replace('#/', '');
     let target = 'home-view';
@@ -314,19 +483,16 @@ class QRBeamApp {
       else window.location.hash = '#/';
     }
 
-    if (viewId === 'send-view' && !this.pairCode) {
-      this.generateSenderPairCode();
-    } else if (viewId === 'receive-view' && !this.receiverScanning) {
-      this.populateCameraDevices();
-    } else if (viewId !== 'receive-view' && this.receiverScanning) {
-      this.stopCamera();
+    if (viewId !== 'receive-view') {
+      if (this.receiverScanning) this.stopCamera();
+      if (this.isAudioReceiving) this.stopAudioReceiver();
     }
   }
 
   /* SENDER LOGIC */
-  setSenderMode(mode) {
-    this.senderMode = mode;
-    if (mode === 'file') {
+  setSenderPayloadType(type) {
+    this.senderPayloadType = type;
+    if (type === 'file') {
       this.dom.modeFileBtn.classList.add('active');
       this.dom.modeLinkBtn.classList.remove('active');
       this.dom.fileSection.classList.add('active');
@@ -373,18 +539,18 @@ class QRBeamApp {
 
   updateSenderButtonState() {
     let ready = false;
-    if (this.senderMode === 'file' && this.selectedFileBuffer) {
+    if (this.senderPayloadType === 'file' && this.selectedFileBuffer) {
       ready = true;
-    } else if (this.senderMode === 'link' && this.linkText.length > 0) {
+    } else if (this.senderPayloadType === 'link' && this.linkText.length > 0) {
       ready = true;
     }
     this.dom.btnStartBeam.disabled = !ready;
   }
 
-  /* PEERJS WI-FI P2P PAIRING */
+  /* PEERJS WI-FI DIRECT PAIRING */
   generateSenderPairCode() {
     this.pairCode = Math.floor(1000 + Math.random() * 9000).toString();
-    this.dom.pairCodeVal.innerText = this.pairCode;
+    if (this.dom.pairCodeVal) this.dom.pairCodeVal.innerText = this.pairCode;
 
     if (typeof Peer !== 'undefined') {
       try {
@@ -392,7 +558,7 @@ class QRBeamApp {
         this.peer = new Peer('qrb-' + this.pairCode);
 
         this.peer.on('open', () => {
-          this.dom.senderTimeEst.innerText = 'Wi-Fi P2P Ready (Code: ' + this.pairCode + ')';
+          this.dom.senderTimeEst.innerText = 'P2P Ready: ' + this.pairCode;
         });
 
         this.peer.on('connection', (conn) => {
@@ -411,7 +577,7 @@ class QRBeamApp {
           });
         });
       } catch (e) {
-        console.warn('PeerJS init warning:', e);
+        console.warn('PeerJS init error:', e);
       }
     }
   }
@@ -423,7 +589,7 @@ class QRBeamApp {
     let rawBytes = null;
     let meta = {};
 
-    if (this.senderMode === 'file') {
+    if (this.senderPayloadType === 'file') {
       meta = {
         name: this.selectedFile.name,
         type: this.selectedFile.type || 'application/octet-stream',
@@ -468,15 +634,13 @@ class QRBeamApp {
       this.dom.compressionBadge.style.display = 'none';
     }
 
-    // Save P2P payload
+    // 1. Prepare Wi-Fi P2P Payload
     this.senderPayloadP2P = { meta, bytes: finalBytes ? Array.from(finalBytes) : null };
-
-    // Send immediately if P2P connection is already open
     if (this.activeConnection && this.activeConnection.open) {
       this.activeConnection.send(this.senderPayloadP2P);
     }
 
-    // Chunk final bytes for optical QR stream backup
+    // 2. Prepare Optical / Audio Slices
     let rawChunks = [];
     if (finalBytes) {
       const totalBytes = finalBytes.length;
@@ -491,8 +655,7 @@ class QRBeamApp {
     const totalChunks = rawChunks.length + 1;
     this.senderPackets = [];
 
-    // Single Pairing QR Code for 1-Scan Wi-Fi Connection
-    const pairingUrl = window.location.origin + window.location.pathname + '#/receive?code=' + this.pairCode;
+    // Metadata Packet 0
     const metaPayload = JSON.stringify(meta);
     this.senderPackets.push(`QRB1:${sessionId}:0:${totalChunks}:${metaPayload}`);
 
@@ -507,14 +670,8 @@ class QRBeamApp {
     this.dom.btnPrevChunk.disabled = false;
     this.dom.btnNextChunk.disabled = false;
 
-    // Render single pairing QR code first
-    QRCode.toCanvas(this.dom.qrCanvas, pairingUrl, {
-      errorCorrectionLevel: 'L',
-      margin: 1,
-      width: 360,
-      color: { dark: '#000000', light: '#ffffff' }
-    });
-
+    // Render first QR frame
+    this.renderSenderFrame();
     this.startSender();
   }
 
@@ -524,10 +681,14 @@ class QRBeamApp {
     this.dom.pauseIcon.style.display = 'inline-block';
     
     this.dom.senderStatus.classList.add('active');
-    this.dom.senderStatus.querySelector('.status-text').innerText = 'Transmitting';
+    this.dom.senderStatus.querySelector('.status-text').innerText = this.transmissionMode === 'audio' ? 'Acoustic Sound Broadcasting' : 'Transmitting';
 
-    this.senderLastFrameTime = performance.now();
-    this.senderLoop();
+    if (this.transmissionMode === 'audio') {
+      this.startAudioTransmitter();
+    } else {
+      this.senderLastFrameTime = performance.now();
+      this.senderLoop();
+    }
   }
 
   stopSender() {
@@ -536,6 +697,8 @@ class QRBeamApp {
       cancelAnimationFrame(this.senderTimerId);
       this.senderTimerId = null;
     }
+    this.stopAudioTransmitter();
+
     this.dom.playIcon.style.display = 'inline-block';
     this.dom.pauseIcon.style.display = 'none';
 
@@ -559,7 +722,7 @@ class QRBeamApp {
   }
 
   senderLoop(timestamp = performance.now()) {
-    if (!this.senderIsPlaying) return;
+    if (!this.senderIsPlaying || this.transmissionMode === 'audio') return;
 
     const interval = 1000 / this.senderFps;
     const elapsed = timestamp - this.senderLastFrameTime;
@@ -600,6 +763,208 @@ class QRBeamApp {
     
     const secondsPerLoop = (total / this.senderFps).toFixed(1);
     this.dom.senderTimeEst.innerText = `Loop: ${secondsPerLoop}s`;
+  }
+
+  /* ================= ACOUSTIC AUDIO MODEM TRANSMITTER (FSK) ================= */
+  async startAudioTransmitter() {
+    try {
+      if (!this.audioCtx) {
+        this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (this.audioCtx.state === 'suspended') {
+        await this.audioCtx.resume();
+      }
+
+      this.isAudioTransmitting = true;
+      this.drawAudioSenderVisualizer();
+      this.playAudioPacketLoop();
+
+    } catch (e) {
+      console.warn('Audio transmitter error:', e);
+    }
+  }
+
+  stopAudioTransmitter() {
+    this.isAudioTransmitting = false;
+    if (this.audioTxOscillator) {
+      try { this.audioTxOscillator.stop(); } catch(e) {}
+      this.audioTxOscillator = null;
+    }
+    if (this.audioAnimId) {
+      cancelAnimationFrame(this.audioAnimId);
+      this.audioAnimId = null;
+    }
+  }
+
+  async playAudioPacketLoop() {
+    while (this.isAudioTransmitting && this.senderPackets.length > 0) {
+      const packet = this.senderPackets[this.senderCurrentIndex];
+      await this.transmitAudioPacket(packet);
+
+      if (!this.isAudioTransmitting) break;
+      this.senderCurrentIndex = (this.senderCurrentIndex + 1) % this.senderPackets.length;
+
+      const total = this.senderPackets.length;
+      const current = this.senderCurrentIndex + 1;
+      const pct = Math.round((current / total) * 100);
+      this.dom.senderChunkBadge.innerText = `Audio Chunk ${current}/${total}`;
+      this.dom.senderProgressFill.style.width = `${pct}%`;
+      this.dom.senderProgressText.innerText = `${pct}% Audio Transmitted`;
+    }
+  }
+
+  async transmitAudioPacket(packetStr) {
+    if (!this.audioCtx || !this.isAudioTransmitting) return;
+
+    // FSK Frequency Specs: Preamble: 1000Hz, Space (0): 1400Hz, Mark (1): 2000Hz
+    const PREAMBLE_FREQ = 1000;
+    const SPACE_FREQ = 1400;
+    const MARK_FREQ = 2000;
+    const BIT_DURATION = 0.025; // 25ms per bit = 40 baud
+
+    const osc = this.audioCtx.createOscillator();
+    const gain = this.audioCtx.createGain();
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.3, this.audioCtx.currentTime);
+
+    osc.connect(gain);
+    gain.connect(this.audioCtx.destination);
+    osc.start();
+    this.audioTxOscillator = osc;
+
+    let time = this.audioCtx.currentTime;
+
+    // 1. Preamble Tone
+    osc.frequency.setValueAtTime(PREAMBLE_FREQ, time);
+    time += 0.15; // 150ms sync tone
+
+    // 2. Encode packet characters to bits
+    const enc = new TextEncoder();
+    const bytes = enc.encode(packetStr + '\n');
+
+    for (let b = 0; b < bytes.length; b++) {
+      const byteVal = bytes[b];
+      // Start Bit (0)
+      osc.frequency.setValueAtTime(SPACE_FREQ, time);
+      time += BIT_DURATION;
+
+      // 8 Data Bits (LSB first)
+      for (let i = 0; i < 8; i++) {
+        const bit = (byteVal >> i) & 1;
+        osc.frequency.setValueAtTime(bit ? MARK_FREQ : SPACE_FREQ, time);
+        time += BIT_DURATION;
+      }
+
+      // Stop Bit (1)
+      osc.frequency.setValueAtTime(MARK_FREQ, time);
+      time += BIT_DURATION;
+
+      if (!this.isAudioTransmitting) break;
+    }
+
+    // Wait for packet playback to finish
+    const waitMs = (time - this.audioCtx.currentTime) * 1000;
+    await new Promise(r => setTimeout(r, Math.max(50, waitMs)));
+
+    try { osc.stop(); } catch(e) {}
+  }
+
+  drawAudioSenderVisualizer() {
+    if (!this.isAudioTransmitting) return;
+    const canvas = this.dom.audioSenderCanvas;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+
+    ctx.fillStyle = '#111318';
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.strokeStyle = '#9bc8ff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+
+    const freq = this.audioTxOscillator ? this.audioTxOscillator.frequency.value : 1600;
+    const t = performance.now() * 0.005;
+
+    for (let x = 0; x < width; x++) {
+      const y = height / 2 + Math.sin(x * 0.05 + t) * Math.cos(x * 0.02) * 40;
+      if (x === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    this.audioAnimId = requestAnimationFrame(() => this.drawAudioSenderVisualizer());
+  }
+
+  /* ================= ACOUSTIC AUDIO MODEM RECEIVER (MIC FFT) ================= */
+  async startAudioReceiver() {
+    try {
+      this.audioRxCtx = new (window.AudioContext || window.webkitAudioContext)();
+      this.audioRxStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      const source = this.audioRxCtx.createMediaStreamSource(this.audioRxStream);
+      this.audioRxAnalyser = this.audioRxCtx.createAnalyser();
+      this.audioRxAnalyser.fftSize = 2048;
+
+      source.connect(this.audioRxAnalyser);
+
+      this.isAudioReceiving = true;
+      this.dom.audioRxPlaceholder.style.display = 'none';
+      this.dom.btnStopAudioRx.style.display = 'flex';
+      this.dom.receiverStatus.classList.add('active');
+      this.dom.receiverStatus.querySelector('.status-text').innerText = 'Listening for Modem Tones';
+
+      this.audioReceiverLoop();
+
+    } catch (e) {
+      alert('Microphone access denied or unsupported.');
+    }
+  }
+
+  stopAudioReceiver() {
+    this.isAudioReceiving = false;
+    if (this.audioRxStream) {
+      this.audioRxStream.getTracks().forEach(t => t.stop());
+      this.audioRxStream = null;
+    }
+    if (this.audioRxAnimId) {
+      cancelAnimationFrame(this.audioRxAnimId);
+      this.audioRxAnimId = null;
+    }
+    this.dom.audioRxPlaceholder.style.display = 'flex';
+    this.dom.btnStopAudioRx.style.display = 'none';
+    this.dom.receiverStatus.classList.remove('active');
+    this.dom.receiverStatus.querySelector('.status-text').innerText = 'Standby';
+  }
+
+  audioReceiverLoop() {
+    if (!this.isAudioReceiving || !this.audioRxAnalyser) return;
+
+    const bufferLength = this.audioRxAnalyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    this.audioRxAnalyser.getByteFrequencyData(dataArray);
+
+    // Draw Audio Spectrum
+    const canvas = this.dom.audioRxCanvas;
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#111318';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const barWidth = (canvas.width / bufferLength) * 2.5;
+      let x = 0;
+      for (let i = 0; i < bufferLength; i++) {
+        const barHeight = (dataArray[i] / 255) * canvas.height;
+        ctx.fillStyle = dataArray[i] > 180 ? '#7bdba3' : '#3d4758';
+        ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+        x += barWidth + 1;
+        if (x > canvas.width) break;
+      }
+    }
+
+    this.audioRxAnimId = requestAnimationFrame(() => this.audioReceiverLoop());
   }
 
   /* RECEIVER LOGIC & PAIR CODE CONNECT */
@@ -645,40 +1010,11 @@ class QRBeamApp {
     }
   }
 
-  async populateCameraDevices() {
-    try {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoInputs = devices.filter(device => device.kind === 'videoinput');
-
-      this.dom.cameraSelect.innerHTML = '';
-      if (videoInputs.length === 0) {
-        const opt = document.createElement('option');
-        opt.innerText = 'Default Camera';
-        this.dom.cameraSelect.appendChild(opt);
-        return;
-      }
-
-      videoInputs.forEach((device, i) => {
-        const opt = document.createElement('option');
-        opt.value = device.deviceId;
-        opt.innerText = device.label || `Camera ${i + 1}`;
-        if (device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('rear')) {
-          opt.selected = true;
-        }
-        this.dom.cameraSelect.appendChild(opt);
-      });
-    } catch (err) {
-      console.warn('Camera enumeration error:', err);
-    }
-  }
-
   async startCamera() {
     try {
       this.dom.cameraPlaceholder.style.display = 'none';
-      const deviceId = this.dom.cameraSelect.value;
-
       const constraints = {
-        video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } }
+        video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } }
       };
 
       this.receiverStream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -694,7 +1030,7 @@ class QRBeamApp {
       this.receiverScanLoop();
 
     } catch (err) {
-      alert('Unable to access camera. Use 4-digit Wi-Fi code entry.');
+      alert('Camera access denied. Use 4-digit pair code.');
       this.dom.cameraPlaceholder.style.display = 'flex';
     }
   }
@@ -714,13 +1050,6 @@ class QRBeamApp {
     this.dom.btnStopCamera.style.display = 'none';
     this.dom.receiverStatus.classList.remove('active');
     this.dom.receiverStatus.querySelector('.status-text').innerText = 'Camera Idle';
-  }
-
-  switchCamera() {
-    if (this.receiverScanning) {
-      this.stopCamera();
-      this.startCamera();
-    }
   }
 
   receiverScanLoop() {
@@ -998,9 +1327,7 @@ class QRBeamApp {
     if (textToCopy) {
       navigator.clipboard.writeText(textToCopy).then(() => {
         alert('Copied to clipboard!');
-      }).catch(err => {
-        console.error('Clipboard copy failed:', err);
-      });
+      }).catch(() => {});
     }
   }
 
