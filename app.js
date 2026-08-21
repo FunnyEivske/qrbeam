@@ -1,6 +1,6 @@
 /**
- * QRBeam - Zero Mobile Data Offline Transfer Engine
- * Features: 100% Offline Local Libraries, Service Worker PWA Caching, Default RGB 3-in-1 Multi-Color Multiplexing, Web Worker scanning, 2D Canvas matrix.
+ * QRBeam - Mobile-Optimized Zero Data Data Transfer Engine
+ * Features: Mobile-ready path resolution, fallback Web Worker, GZIP compression, 2D Canvas defragmentation matrix.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -12,14 +12,14 @@ class QRBeamApp {
   constructor() {
     this.currentView = 'home-view';
     
-    // Sender State (Default to RGB Multi-Color 3x Mode)
+    // Sender State
     this.senderMode = 'file';
     this.selectedFile = null;
     this.selectedFileBuffer = null;
     this.linkText = '';
-    this.senderFps = 15;
-    this.senderChunkSize = 384;
-    this.isRgbMode = true; // DEFAULT TO MULTI-COLOR RGB STREAM!
+    this.senderFps = 12;
+    this.senderChunkSize = 256;
+    this.isRgbMode = false; // Default to robust single-QR stream for max mobile compatibility
     this.senderPackets = [];
     this.senderCurrentIndex = 0;
     this.senderIsPlaying = false;
@@ -27,10 +27,9 @@ class QRBeamApp {
     this.senderLastFrameTime = 0;
     this.senderSessionId = '';
 
-    // WebRTC P2P State
+    // WebRTC State
     this.peerConnection = null;
     this.dataChannel = null;
-    this.webrtcConnected = false;
 
     // Receiver State
     this.receiverStream = null;
@@ -63,8 +62,8 @@ class QRBeamApp {
   }
 
   init() {
-    this.initQRWorker();
     this.cacheDOM();
+    this.initQRWorker();
     this.bindEvents();
     this.handleRouting();
   }
@@ -78,7 +77,7 @@ class QRBeamApp {
       const compressedBytes = new Uint8Array(compressedBuffer);
       return compressedBytes.byteLength < uint8Array.byteLength ? compressedBytes : uint8Array;
     } catch (e) {
-      console.warn('Compression failed, using raw bytes:', e);
+      console.warn('Compression skipped:', e);
       return uint8Array;
     }
   }
@@ -90,81 +89,44 @@ class QRBeamApp {
       const decompressedBuffer = await new Response(stream).arrayBuffer();
       return new Uint8Array(decompressedBuffer);
     } catch (e) {
-      console.warn('Decompression failed, returning raw bytes:', e);
+      console.warn('Decompression skipped:', e);
       return uint8Array;
     }
   }
 
-  /* INLINE WEB WORKER USING LOCAL JSQR LIBRARY (ZERO MOBILE DATA) */
+  /* WEB WORKER RESOLUTION WITH MAIN-THREAD FALLBACK FOR MOBILE */
   initQRWorker() {
-    const origin = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
-    const localJsqrUrl = origin + 'libs/jsqr.min.js';
-
-    const workerCode = `
-      try {
-        importScripts('${localJsqrUrl}');
-      } catch (err) {
-        importScripts('https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js');
-      }
-
-      self.onmessage = function(e) {
-        const { imageData, width, height } = e.data;
-        const data = imageData.data;
-        const results = [];
-
-        // 1. Standard RGB/Grayscale Scan
-        try {
-          const codeMain = jsQR(data, width, height, { inversionAttempts: 'dontInvert' });
-          if (codeMain && codeMain.data) results.push(codeMain.data);
-        } catch (err) {}
-
-        // 2. Separate Red Channel Image
-        try {
-          const redData = new Uint8ClampedArray(width * height * 4);
-          for (let i = 0; i < data.length; i += 4) {
-            const r = data[i];
-            redData[i] = r;
-            redData[i+1] = r;
-            redData[i+2] = r;
-            redData[i+3] = 255;
-          }
-          const codeRed = jsQR(redData, width, height, { inversionAttempts: 'dontInvert' });
-          if (codeRed && codeRed.data) results.push(codeRed.data);
-        } catch (err) {}
-
-        // 3. Separate Green Channel Image
-        try {
-          const greenData = new Uint8ClampedArray(width * height * 4);
-          for (let i = 0; i < data.length; i += 4) {
-            const g = data[i+1];
-            greenData[i] = g;
-            greenData[i+1] = g;
-            greenData[i+2] = g;
-            greenData[i+3] = 255;
-          }
-          const codeGreen = jsQR(greenData, width, height, { inversionAttempts: 'dontInvert' });
-          if (codeGreen && codeGreen.data) results.push(codeGreen.data);
-        } catch (err) {}
-
-        // 4. Separate Blue Channel Image
-        try {
-          const blueData = new Uint8ClampedArray(width * height * 4);
-          for (let i = 0; i < data.length; i += 4) {
-            const b = data[i+2];
-            blueData[i] = b;
-            blueData[i+1] = b;
-            blueData[i+2] = b;
-            blueData[i+3] = 255;
-          }
-          const codeBlue = jsQR(blueData, width, height, { inversionAttempts: 'dontInvert' });
-          if (codeBlue && codeBlue.data) results.push(codeBlue.data);
-        } catch (err) {}
-
-        self.postMessage({ results: results });
-      };
-    `;
-
     try {
+      const basePath = window.location.origin + window.location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, '') + '/';
+      const localJsqrUrl = basePath + 'libs/jsqr.min.js';
+
+      const workerCode = `
+        try {
+          importScripts('${localJsqrUrl}');
+        } catch (err) {
+          try {
+            importScripts('https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js');
+          } catch (e) {}
+        }
+
+        self.onmessage = function(e) {
+          const { imageData, width, height } = e.data;
+          if (typeof jsQR === 'undefined') {
+            self.postMessage({ results: [] });
+            return;
+          }
+          const data = imageData.data;
+          const results = [];
+
+          try {
+            const codeMain = jsQR(data, width, height, { inversionAttempts: 'dontInvert' });
+            if (codeMain && codeMain.data) results.push(codeMain.data);
+          } catch (err) {}
+
+          self.postMessage({ results: results });
+        };
+      `;
+
       const blob = new Blob([workerCode], { type: 'application/javascript' });
       const workerUrl = URL.createObjectURL(blob);
       this.qrWorker = new Worker(workerUrl);
@@ -177,18 +139,18 @@ class QRBeamApp {
       };
 
       this.qrWorker.onerror = (err) => {
-        console.warn('Worker scan error fallback:', err);
+        console.warn('Worker error, using main thread scanner:', err);
         this.workerBusy = false;
+        this.qrWorker = null;
       };
     } catch (e) {
-      console.warn('Worker creation failed:', e);
+      console.warn('Worker initialization skipped:', e);
       this.qrWorker = null;
     }
   }
 
   cacheDOM() {
     this.dom.tabs = document.querySelectorAll('.m3-pill-tab, .m3-bottom-nav-item');
-    this.dom.bottomNavItems = document.querySelectorAll('.m3-bottom-nav-item');
     this.dom.views = document.querySelectorAll('.m3-view');
     this.dom.logoBtn = document.getElementById('logo-btn');
     this.dom.btnGotoSend = document.getElementById('btn-goto-send');
@@ -262,9 +224,9 @@ class QRBeamApp {
 
   bindEvents() {
     window.addEventListener('hashchange', () => this.handleRouting());
-    this.dom.logoBtn.addEventListener('click', () => this.navigateTo('home-view'));
-    this.dom.btnGotoSend.addEventListener('click', () => this.navigateTo('send-view'));
-    this.dom.btnGotoReceive.addEventListener('click', () => this.navigateTo('receive-view'));
+    if (this.dom.logoBtn) this.dom.logoBtn.addEventListener('click', () => this.navigateTo('home-view'));
+    if (this.dom.btnGotoSend) this.dom.btnGotoSend.addEventListener('click', () => this.navigateTo('send-view'));
+    if (this.dom.btnGotoReceive) this.dom.btnGotoReceive.addEventListener('click', () => this.navigateTo('receive-view'));
 
     this.dom.tabs.forEach(tab => {
       tab.addEventListener('click', () => {
@@ -273,94 +235,97 @@ class QRBeamApp {
       });
     });
 
-    this.dom.modeFileBtn.addEventListener('click', () => this.setSenderMode('file'));
-    this.dom.modeLinkBtn.addEventListener('click', () => this.setSenderMode('link'));
+    if (this.dom.modeFileBtn) this.dom.modeFileBtn.addEventListener('click', () => this.setSenderMode('file'));
+    if (this.dom.modeLinkBtn) this.dom.modeLinkBtn.addEventListener('click', () => this.setSenderMode('link'));
 
-    this.dom.dropZone.addEventListener('click', (e) => {
-      if (e.target !== this.dom.btnRemoveFile && !this.dom.btnRemoveFile.contains(e.target)) {
-        this.dom.filePicker.click();
-      }
-    });
-
-    this.dom.filePicker.addEventListener('change', (e) => this.handleFileSelect(e.target.files[0]));
-
-    ['dragenter', 'dragover'].forEach(eventName => {
-      this.dom.dropZone.addEventListener(eventName, (e) => {
-        e.preventDefault();
-        this.dom.dropZone.classList.add('dragover');
+    if (this.dom.dropZone) {
+      this.dom.dropZone.addEventListener('click', (e) => {
+        if (e.target !== this.dom.btnRemoveFile && !this.dom.btnRemoveFile.contains(e.target)) {
+          this.dom.filePicker.click();
+        }
       });
-    });
+    }
 
-    ['dragleave', 'drop'].forEach(eventName => {
-      this.dom.dropZone.addEventListener(eventName, (e) => {
-        e.preventDefault();
-        this.dom.dropZone.classList.remove('dragover');
+    if (this.dom.filePicker) {
+      this.dom.filePicker.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+          this.handleFileSelect(e.target.files[0]);
+        }
       });
-    });
+    }
 
-    this.dom.dropZone.addEventListener('drop', (e) => {
-      const dt = e.dataTransfer;
-      if (dt.files && dt.files.length > 0) {
-        this.handleFileSelect(dt.files[0]);
-      }
-    });
+    if (this.dom.btnRemoveFile) {
+      this.dom.btnRemoveFile.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.clearSelectedFile();
+      });
+    }
 
-    this.dom.btnRemoveFile.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.clearSelectedFile();
-    });
+    if (this.dom.linkTextarea) {
+      this.dom.linkTextarea.addEventListener('input', () => {
+        this.linkText = this.dom.linkTextarea.value.trim();
+        this.updateSenderButtonState();
+      });
+    }
 
-    this.dom.linkTextarea.addEventListener('input', () => {
-      this.linkText = this.dom.linkTextarea.value.trim();
-      this.updateSenderButtonState();
-    });
-
-    this.dom.presetMobileFast.addEventListener('click', () => this.applyPreset(256, 12, false, this.dom.presetMobileFast));
+    if (this.dom.presetMobileFast) {
+      this.dom.presetMobileFast.addEventListener('click', () => this.applyPreset(256, 12, false, this.dom.presetMobileFast));
+    }
     if (this.dom.presetRgbTurbo) {
       this.dom.presetRgbTurbo.addEventListener('click', () => this.applyPreset(384, 15, true, this.dom.presetRgbTurbo));
     }
-    this.dom.presetDense.addEventListener('click', () => this.applyPreset(768, 15, false, this.dom.presetDense));
+    if (this.dom.presetDense) {
+      this.dom.presetDense.addEventListener('click', () => this.applyPreset(768, 15, false, this.dom.presetDense));
+    }
 
-    this.dom.sliderFps.addEventListener('input', (e) => {
-      this.senderFps = parseInt(e.target.value, 10);
-      this.dom.valFps.innerText = `${this.senderFps} FPS`;
-    });
+    if (this.dom.sliderFps) {
+      this.dom.sliderFps.addEventListener('input', (e) => {
+        this.senderFps = parseInt(e.target.value, 10);
+        this.dom.valFps.innerText = `${this.senderFps} FPS`;
+      });
+    }
 
-    this.dom.sliderChunkSize.addEventListener('input', (e) => {
-      this.senderChunkSize = parseInt(e.target.value, 10);
-      this.dom.valChunkSize.innerText = `${this.senderChunkSize} Bytes`;
-      if (this.senderPackets.length > 0) {
-        this.prepareSenderPayload();
-      }
-    });
+    if (this.dom.sliderChunkSize) {
+      this.dom.sliderChunkSize.addEventListener('input', (e) => {
+        this.senderChunkSize = parseInt(e.target.value, 10);
+        this.dom.valChunkSize.innerText = `${this.senderChunkSize} Bytes`;
+        if (this.senderPackets.length > 0) {
+          this.prepareSenderPayload();
+        }
+      });
+    }
 
-    this.dom.btnStartBeam.addEventListener('click', () => this.prepareSenderPayload());
-    this.dom.btnTogglePlay.addEventListener('click', () => this.toggleSenderPlay());
-    this.dom.btnPrevChunk.addEventListener('click', () => this.stepSenderChunk(-1));
-    this.dom.btnNextChunk.addEventListener('click', () => this.stepSenderChunk(1));
+    if (this.dom.btnStartBeam) this.dom.btnStartBeam.addEventListener('click', () => this.prepareSenderPayload());
+    if (this.dom.btnTogglePlay) this.dom.btnTogglePlay.addEventListener('click', () => this.toggleSenderPlay());
+    if (this.dom.btnPrevChunk) this.dom.btnPrevChunk.addEventListener('click', () => this.stepSenderChunk(-1));
+    if (this.dom.btnNextChunk) this.dom.btnNextChunk.addEventListener('click', () => this.stepSenderChunk(1));
 
-    this.dom.btnStartCamera.addEventListener('click', () => this.startCamera());
-    this.dom.btnStopCamera.addEventListener('click', () => this.stopCamera());
-    this.dom.cameraSelect.addEventListener('change', () => this.switchCamera());
-    this.dom.btnResetSession.addEventListener('click', () => this.resetReceiverSession());
-    this.dom.btnCopyLink.addEventListener('click', () => this.copyLinkToClipboard());
+    if (this.dom.btnStartCamera) this.dom.btnStartCamera.addEventListener('click', () => this.startCamera());
+    if (this.dom.btnStopCamera) this.dom.btnStopCamera.addEventListener('click', () => this.stopCamera());
+    if (this.dom.cameraSelect) this.dom.cameraSelect.addEventListener('change', () => this.switchCamera());
+    if (this.dom.btnResetSession) this.dom.btnResetSession.addEventListener('click', () => this.resetReceiverSession());
+    if (this.dom.btnCopyLink) this.dom.btnCopyLink.addEventListener('click', () => this.copyLinkToClipboard());
   }
 
   applyPreset(chunkSize, fps, isRgb, activeBtn) {
     [this.dom.presetMobileFast, this.dom.presetRgbTurbo, this.dom.presetDense].forEach(btn => {
       if (btn) btn.classList.remove('active');
     });
-    activeBtn.classList.add('active');
+    if (activeBtn) activeBtn.classList.add('active');
 
     this.senderChunkSize = chunkSize;
     this.senderFps = fps;
     this.isRgbMode = isRgb;
 
-    this.dom.sliderChunkSize.value = chunkSize;
-    this.dom.valChunkSize.innerText = `${chunkSize} Bytes`;
+    if (this.dom.sliderChunkSize) {
+      this.dom.sliderChunkSize.value = chunkSize;
+      this.dom.valChunkSize.innerText = `${chunkSize} Bytes`;
+    }
 
-    this.dom.sliderFps.value = fps;
-    this.dom.valFps.innerText = `${fps} FPS`;
+    if (this.dom.sliderFps) {
+      this.dom.sliderFps.value = fps;
+      this.dom.valFps.innerText = `${fps} FPS`;
+    }
 
     if (this.senderPackets.length > 0) {
       this.prepareSenderPayload();
@@ -467,32 +432,9 @@ class QRBeamApp {
     this.dom.btnStartBeam.disabled = !ready;
   }
 
-  async setupSenderWebRTC(payloadBytes) {
-    try {
-      this.peerConnection = new RTCPeerConnection({
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-      });
-
-      this.dataChannel = this.peerConnection.createDataChannel('qrbeam-data');
-      this.dataChannel.binaryType = 'arraybuffer';
-
-      this.dataChannel.onopen = () => {
-        this.webrtcConnected = true;
-        this.dom.senderStatus.querySelector('.status-text').innerText = 'P2P WebRTC Direct (100 MB/s)';
-        if (payloadBytes) {
-          this.dataChannel.send(payloadBytes);
-        }
-      };
-
-    } catch (e) {
-      console.warn('WebRTC P2P setup error:', e);
-    }
-  }
-
   async prepareSenderPayload() {
     this.stopSender();
     this.senderSessionId = Math.random().toString(16).substring(2, 6);
-    this.webrtcConnected = false;
 
     let rawBytes = null;
     let meta = {};
@@ -542,10 +484,6 @@ class QRBeamApp {
       this.dom.compressionBadge.style.display = 'none';
     }
 
-    if (finalBytes) {
-      this.setupSenderWebRTC(finalBytes);
-    }
-
     let rawChunks = [];
     if (finalBytes) {
       const totalBytes = finalBytes.length;
@@ -585,7 +523,7 @@ class QRBeamApp {
     this.dom.pauseIcon.style.display = 'inline-block';
     
     this.dom.senderStatus.classList.add('active');
-    this.dom.senderStatus.querySelector('.status-text').innerText = this.isRgbMode ? 'Transmitting (Multi-Color RGB 3x)' : 'Transmitting';
+    this.dom.senderStatus.querySelector('.status-text').innerText = 'Transmitting';
 
     this.senderLastFrameTime = performance.now();
     this.senderLoop();
@@ -615,8 +553,7 @@ class QRBeamApp {
   stepSenderChunk(delta) {
     this.stopSender();
     if (this.senderPackets.length === 0) return;
-    const stepSize = this.isRgbMode ? 3 : 1;
-    this.senderCurrentIndex = (this.senderCurrentIndex + delta * stepSize + this.senderPackets.length) % this.senderPackets.length;
+    this.senderCurrentIndex = (this.senderCurrentIndex + delta + this.senderPackets.length) % this.senderPackets.length;
     this.renderSenderFrame();
   }
 
@@ -629,8 +566,7 @@ class QRBeamApp {
     if (elapsed >= interval) {
       this.senderLastFrameTime = timestamp - (elapsed % interval);
       this.renderSenderFrame();
-      const stepSize = this.isRgbMode ? 3 : 1;
-      this.senderCurrentIndex = (this.senderCurrentIndex + stepSize) % this.senderPackets.length;
+      this.senderCurrentIndex = (this.senderCurrentIndex + 1) % this.senderPackets.length;
     }
 
     this.senderTimerId = requestAnimationFrame((ts) => this.senderLoop(ts));
@@ -641,41 +577,19 @@ class QRBeamApp {
     if (total === 0) return;
 
     const canvas = this.dom.qrCanvas;
-    const ctx = canvas.getContext('2d');
+    const packet = this.senderPackets[this.senderCurrentIndex];
 
-    if (!this.isRgbMode) {
-      const packet = this.senderPackets[this.senderCurrentIndex];
+    try {
       QRCode.toCanvas(canvas, packet, {
         errorCorrectionLevel: 'L',
         margin: 1,
-        width: 400,
+        width: 320,
         color: { dark: '#000000', light: '#ffffff' }
+      }, (error) => {
+        if (error) console.error('QR Canvas error:', error);
       });
-    } else {
-      // Multi-Color RGB 3-in-1 Channel Multiplexed Frame
-      const p1 = this.senderPackets[this.senderCurrentIndex % total];
-      const p2 = this.senderPackets[(this.senderCurrentIndex + 1) % total];
-      const p3 = this.senderPackets[(this.senderCurrentIndex + 2) % total];
-
-      QRCode.toCanvas(this.offCanvas1, p1, { errorCorrectionLevel: 'L', margin: 1, width: 400 });
-      QRCode.toCanvas(this.offCanvas2, p2, { errorCorrectionLevel: 'L', margin: 1, width: 400 });
-      QRCode.toCanvas(this.offCanvas3, p3, { errorCorrectionLevel: 'L', margin: 1, width: 400 });
-
-      const imgData1 = this.offCanvas1.getContext('2d').getImageData(0, 0, 400, 400).data;
-      const imgData2 = this.offCanvas2.getContext('2d').getImageData(0, 0, 400, 400).data;
-      const imgData3 = this.offCanvas3.getContext('2d').getImageData(0, 0, 400, 400).data;
-
-      const rgbImgData = ctx.createImageData(400, 400);
-      const data = rgbImgData.data;
-
-      for (let i = 0; i < data.length; i += 4) {
-        data[i]     = imgData1[i] < 128 ? 255 : 0; // Red Channel
-        data[i + 1] = imgData2[i] < 128 ? 255 : 0; // Green Channel
-        data[i + 2] = imgData3[i] < 128 ? 255 : 0; // Blue Channel
-        data[i + 3] = 255;
-      }
-
-      ctx.putImageData(rgbImgData, 0, 0);
+    } catch (e) {
+      console.warn('QR Render error fallback:', e);
     }
 
     const current = this.senderCurrentIndex + 1;
@@ -685,7 +599,7 @@ class QRBeamApp {
     this.dom.senderProgressFill.style.width = `${pct}%`;
     this.dom.senderProgressText.innerText = `${pct}% Complete`;
     
-    const secondsPerLoop = (total / (this.senderFps * (this.isRgbMode ? 3 : 1))).toFixed(1);
+    const secondsPerLoop = (total / this.senderFps).toFixed(1);
     this.dom.senderTimeEst.innerText = `Loop: ${secondsPerLoop}s`;
   }
 
@@ -698,7 +612,7 @@ class QRBeamApp {
       this.dom.cameraSelect.innerHTML = '';
       if (videoInputs.length === 0) {
         const opt = document.createElement('option');
-        opt.innerText = 'No camera found';
+        opt.innerText = 'Default Camera';
         this.dom.cameraSelect.appendChild(opt);
         return;
       }
@@ -739,7 +653,7 @@ class QRBeamApp {
       this.receiverScanLoop();
 
     } catch (err) {
-      console.error('Camera access denied:', err);
+      console.error('Camera access error:', err);
       alert('Unable to access camera. Please allow camera permissions in browser settings.');
       this.dom.cameraPlaceholder.style.display = 'flex';
     }
@@ -794,12 +708,12 @@ class QRBeamApp {
         this.dom.recSpeed.innerText = `${this.receiverCurrentFps} fps`;
       }
 
+      const imageData = ctx.getImageData(0, 0, scaleWidth, scaleHeight);
+
       if (this.qrWorker && !this.workerBusy) {
-        const imageData = ctx.getImageData(0, 0, scaleWidth, scaleHeight);
         this.workerBusy = true;
         this.qrWorker.postMessage({ imageData, width: scaleWidth, height: scaleHeight });
-      } else if (!this.qrWorker) {
-        const imageData = ctx.getImageData(0, 0, scaleWidth, scaleHeight);
+      } else if (typeof jsQR !== 'undefined') {
         const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
         if (code && code.data) {
           this.processScannedPacket(code.data);
