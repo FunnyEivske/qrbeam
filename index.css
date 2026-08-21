@@ -77,6 +77,7 @@ html, body {
   font-family: var(--md-font-sans);
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .material-symbols-outlined {
@@ -92,35 +93,35 @@ html, body {
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
-  opacity: 0.5;
+  opacity: 0.4;
 }
 
 .m3-blob {
   position: absolute;
   border-radius: 50%;
   filter: blur(140px);
-  opacity: 0.35;
+  opacity: 0.3;
 }
 
 .blob-primary {
-  width: 500px;
-  height: 500px;
+  width: 450px;
+  height: 450px;
   background: var(--md-sys-color-primary);
   top: -150px;
   left: -150px;
 }
 
 .blob-secondary {
-  width: 600px;
-  height: 600px;
+  width: 500px;
+  height: 500px;
   background: var(--md-sys-color-tertiary);
   bottom: -200px;
   right: -200px;
 }
 
 .blob-tertiary {
-  width: 400px;
-  height: 400px;
+  width: 350px;
+  height: 350px;
   background: var(--md-sys-color-secondary-container);
   top: 40%;
   left: 30%;
@@ -1141,7 +1142,7 @@ html, body {
   gap: 0.65rem;
 }
 
-/* Mobile Navigation Bar */
+/* Mobile Layout Overrides (<768px) */
 .m3-bottom-nav {
   display: none;
 }
@@ -1151,28 +1152,128 @@ html, body {
   .mobile-only { display: flex !important; }
 
   .m3-app-shell {
-    padding: 0.85rem;
+    padding: 0.5rem;
     padding-bottom: 5.5rem;
   }
 
+  /* Compact Top Bar */
+  .m3-top-app-bar {
+    padding: 0.5rem 0.85rem;
+    border-radius: var(--md-shape-lg);
+    margin-bottom: 0.75rem;
+  }
+
+  .m3-brand-icon {
+    width: 34px;
+    height: 34px;
+  }
+
+  .title-main {
+    font-size: 1.1rem;
+  }
+
+  .m3-chip-expressive {
+    font-size: 0.6rem;
+    padding: 0.15rem 0.4rem;
+  }
+
+  /* Main Container & Hero */
+  .m3-hero-expressive {
+    margin-top: 0.5rem;
+  }
+
   .m3-display-large {
-    font-size: 2.2rem;
+    font-size: 1.85rem;
+    line-height: 1.2;
+    margin-bottom: 0.75rem;
   }
 
   .m3-body-large {
-    font-size: 0.98rem;
+    font-size: 0.9rem;
+    margin-bottom: 1.25rem;
   }
 
   .m3-hero-grid {
     grid-template-columns: 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1.75rem;
   }
 
+  .m3-grid-layout {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  /* Cards on Mobile */
+  .m3-card {
+    padding: 1rem;
+    border-radius: var(--md-shape-lg);
+    gap: 0.85rem;
+  }
+
+  /* QR Frame on Mobile */
+  .m3-qr-frame {
+    width: 100%;
+    max-width: 250px;
+    height: auto;
+    aspect-ratio: 1;
+    padding: 10px;
+    margin-bottom: 0.85rem;
+  }
+
+  /* Camera Viewfinder on Mobile */
+  .m3-viewfinder-container {
+    max-height: 220px;
+    border-radius: var(--md-shape-lg);
+    margin-bottom: 0.75rem;
+  }
+
+  .m3-reticle-box {
+    width: 150px;
+    height: 150px;
+  }
+
+  /* Touch Targets */
+  .m3-button {
+    min-height: 48px;
+    padding: 0.75rem 1.2rem;
+    font-size: 0.9rem;
+  }
+
+  .m3-presets-row {
+    gap: 0.4rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .m3-chip-preset {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.75rem;
+  }
+
+  /* Defragmentation Matrix */
+  .m3-canvas-grid-wrapper {
+    height: 90px;
+  }
+
+  .m3-metrics-row {
+    gap: 0.4rem;
+  }
+
+  .m3-metric-card {
+    padding: 0.5rem;
+  }
+
+  .metric-value {
+    font-size: 0.95rem;
+  }
+
+  /* M3 Mobile Bottom Nav Bar */
   .m3-bottom-nav {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    height: 72px;
+    height: 70px;
     background: var(--md-sys-color-surface-container-low);
     border-top: 1px solid var(--md-sys-color-outline-variant);
     z-index: 999;
@@ -1187,7 +1288,7 @@ html, body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0.2rem;
     background: transparent;
     border: none;
     color: var(--md-sys-color-on-surface-variant);
