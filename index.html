@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>QRBeam v3.1.0 - Multi-Modal Optical, Audio Modem & Wi-Fi Transfer</title>
-  <meta name="description" content="Transfer files & links between devices using Wi-Fi P2P, high-contrast optical QR streaming, or retro acoustic audio modem frequencies.">
+  <title>QRBeam v3.2.0 - Universal Multi-Protocol Device Communicator</title>
+  <meta name="description" content="Universal peer-to-peer data communicator supporting Optical QR, Acoustic Sound Modems, Bluetooth BLE, NFC Beam, Radio Serial, and Wi-Fi P2P.">
   <link rel="manifest" href="manifest.json">
   
   <!-- Google Fonts: Plus Jakarta Sans & Material Symbols -->
@@ -38,7 +38,7 @@
         </div>
         <div class="m3-brand-title">
           <span class="title-main">QR<span class="title-accent">Beam</span></span>
-          <span class="m3-chip-version">v3.1.0</span>
+          <span class="m3-chip-version">v3.2.0</span>
         </div>
       </div>
 
@@ -57,8 +57,8 @@
         </button>
 
         <button class="m3-pill-tab" id="tab-receive" data-target="receive-view">
-          <span class="material-symbols-outlined icon-inactive">hearing</span>
-          <span class="material-symbols-outlined icon-active">hearing</span>
+          <span class="material-symbols-outlined icon-inactive">sensors</span>
+          <span class="material-symbols-outlined icon-active">sensors</span>
           <span class="tab-label">Receive</span>
         </button>
       </nav>
@@ -72,16 +72,16 @@
         <div class="m3-hero-expressive">
           <div class="m3-badge-pill">
             <span class="m3-dot-pulse"></span>
-            <span>Tri-Mode: Wi-Fi P2P • Optical QR • Acoustic Audio Modem</span>
+            <span>Universal Multi-Protocol Mesh Communicator</span>
           </div>
 
           <h1 class="m3-display-large">
-            Transfer Data Through <br>
-            <span class="m3-gradient-text">Screen, Sound, or Wi-Fi Direct</span>
+            Communicate Over Any Medium <br>
+            <span class="m3-gradient-text">Screen, Sound, Bluetooth, NFC, Radio & Wi-Fi</span>
           </h1>
 
           <p class="m3-body-large">
-            Transfer any file or link instantly. Connects via Wi-Fi P2P when on the same network, streams through high-contrast QR video, or transmits acoustic audio chirps like a dialup modem!
+            Transfer files and messages between phones, laptops, and tablets using any available hardware: screen-to-camera optical QR, audio modem chirps, Bluetooth BLE, NFC touch, Radio RF, or Wi-Fi P2P.
           </p>
 
           <!-- Hero Action Cards -->
@@ -92,12 +92,12 @@
                 <span class="material-symbols-outlined">upload_file</span>
               </div>
               <div class="m3-card-body">
-                <h3 class="m3-title-large">Send File or Link</h3>
-                <p class="m3-body-medium">Broadcast over Wi-Fi P2P, rapid QR codes, or audio modem soundwaves.</p>
+                <h3 class="m3-title-large">Send via Any Protocol</h3>
+                <p class="m3-body-medium">Choose between Optical QR, Audio Modem, Bluetooth, NFC, Radio, or Wi-Fi.</p>
               </div>
               <div class="m3-card-action">
                 <button class="m3-button m3-button-filled">
-                  <span>Start Sending</span>
+                  <span>Open Sender</span>
                   <span class="material-symbols-outlined">arrow_forward</span>
                 </button>
               </div>
@@ -109,39 +109,60 @@
                 <span class="material-symbols-outlined">sensors</span>
               </div>
               <div class="m3-card-body">
-                <h3 class="m3-title-large">Receive Anywhere</h3>
-                <p class="m3-body-medium">Receive by Wi-Fi code, camera scanner, or microphone sound detection.</p>
+                <h3 class="m3-title-large">Receive via Any Sensor</h3>
+                <p class="m3-body-medium">Capture through camera, microphone, Bluetooth scanner, NFC tap, or Wi-Fi code.</p>
               </div>
               <div class="m3-card-action">
                 <button class="m3-button m3-button-tonal">
-                  <span>Start Receiving</span>
+                  <span>Open Receiver</span>
                   <span class="material-symbols-outlined">arrow_forward</span>
                 </button>
               </div>
             </div>
           </div>
 
-          <!-- Highlights -->
+          <!-- Protocols Matrix -->
           <div class="m3-features-row">
             <div class="m3-feature-chip">
-              <span class="material-symbols-outlined">wifi</span>
+              <span class="material-symbols-outlined">qr_code_2</span>
               <div>
-                <strong>P2P Direct First</strong>
-                <p>Attempts 1-second Wi-Fi direct transfer first, then seamlessly streams.</p>
+                <strong>Optical QR Video</strong>
+                <p>High-speed visual data streaming between screens and cameras.</p>
               </div>
             </div>
             <div class="m3-feature-chip">
               <span class="material-symbols-outlined">volume_up</span>
               <div>
-                <strong>Audio Modem (Sound)</strong>
-                <p>Transfers binary bytes as retro audio tones through speakers and mic.</p>
+                <strong>Acoustic Audio Modem</strong>
+                <p>Dialup FSK acoustic frequencies through speakers and mic.</p>
               </div>
             </div>
             <div class="m3-feature-chip">
-              <span class="material-symbols-outlined">qr_code_2</span>
+              <span class="material-symbols-outlined">bluetooth</span>
               <div>
-                <strong>Optical QR Stream</strong>
-                <p>High-contrast B&W video stream with customizable FPS and chunk size.</p>
+                <strong>Bluetooth Low Energy</strong>
+                <p>Wireless GATT characteristic stream between nearby devices.</p>
+              </div>
+            </div>
+            <div class="m3-feature-chip">
+              <span class="material-symbols-outlined">nfc</span>
+              <div>
+                <strong>NFC Touch Beam</strong>
+                <p>Tap device backs together to beam instant links and tokens.</p>
+              </div>
+            </div>
+            <div class="m3-feature-chip">
+              <span class="material-symbols-outlined">wifi</span>
+              <div>
+                <strong>Wi-Fi Direct P2P</strong>
+                <p>Instant 1-second transfer when on the same network.</p>
+              </div>
+            </div>
+            <div class="m3-feature-chip">
+              <span class="material-symbols-outlined">radio</span>
+              <div>
+                <strong>Radio RF / Serial</strong>
+                <p>Transmits over LoRa / HC-12 radio USB transceivers.</p>
               </div>
             </div>
           </div>
@@ -156,7 +177,7 @@
           <div class="m3-grid-col">
             <div class="m3-card m3-card-outlined">
               <div class="m3-card-header">
-                <h2 class="m3-title-medium">Select Payload</h2>
+                <h2 class="m3-title-medium">Payload</h2>
                 
                 <div class="m3-segmented-button">
                   <button class="m3-segment-item active" id="input-mode-file">
@@ -180,7 +201,7 @@
                       <span class="material-symbols-outlined">cloud_upload</span>
                     </div>
                     <h4 class="m3-title-medium">Tap or Drag File Here</h4>
-                    <p class="m3-body-small">Select any file to transfer</p>
+                    <p class="m3-body-small">Select any file to broadcast</p>
                   </div>
 
                   <!-- File Selected Banner -->
@@ -211,9 +232,9 @@
                 <span id="compression-text">GZIP Compressed</span>
               </div>
 
-              <!-- Mode Selection (Optical QR / Audio Modem / Wi-Fi) -->
+              <!-- Multi-Protocol Transmission Selector -->
               <div class="m3-config-box">
-                <div class="m3-config-heading">Transmission Mode</div>
+                <div class="m3-config-heading">Transmission Protocol</div>
                 <div class="m3-presets-row">
                   <button class="m3-chip-preset active" id="mode-select-qr">
                     <span class="material-symbols-outlined">qr_code_2</span>
@@ -227,63 +248,76 @@
                     <span class="material-symbols-outlined">wifi</span>
                     <span>Wi-Fi P2P</span>
                   </button>
+                  <button class="m3-chip-preset" id="mode-select-ble">
+                    <span class="material-symbols-outlined">bluetooth</span>
+                    <span>Bluetooth</span>
+                  </button>
+                  <button class="m3-chip-preset" id="mode-select-nfc">
+                    <span class="material-symbols-outlined">nfc</span>
+                    <span>NFC Tap</span>
+                  </button>
+                  <button class="m3-chip-preset" id="mode-select-radio">
+                    <span class="material-symbols-outlined">radio</span>
+                    <span>Radio Serial</span>
+                  </button>
                 </div>
 
-                <!-- Speed / FPS Slider -->
-                <div class="m3-slider-group" id="slider-fps-container">
-                  <div class="m3-slider-label-row">
-                    <span class="m3-label-large" id="label-speed-control">Frame Rate (Speed)</span>
-                    <span class="m3-badge-value" id="val-fps">12 FPS</span>
+                <!-- Sliders for Optical / Audio Rate -->
+                <div id="protocol-config-sliders">
+                  <div class="m3-slider-group" id="slider-fps-container">
+                    <div class="m3-slider-label-row">
+                      <span class="m3-label-large" id="label-speed-control">Transmission Rate (FPS / Speed)</span>
+                      <span class="m3-badge-value" id="val-fps">12 FPS</span>
+                    </div>
+                    <input type="range" id="slider-fps" min="2" max="25" value="12" step="1" class="m3-slider">
+                    <div class="m3-slider-ticks">
+                      <span>2 FPS</span>
+                      <span>12 FPS (Recommended)</span>
+                      <span>25 FPS</span>
+                    </div>
                   </div>
-                  <input type="range" id="slider-fps" min="2" max="25" value="12" step="1" class="m3-slider">
-                  <div class="m3-slider-ticks">
-                    <span>2 FPS</span>
-                    <span>12 FPS (Balanced)</span>
-                    <span>25 FPS</span>
+
+                  <div class="m3-slider-group" id="slider-chunk-container">
+                    <div class="m3-slider-label-row">
+                      <span class="m3-label-large">Chunk Size</span>
+                      <span class="m3-badge-value" id="val-chunk-size">256 Bytes</span>
+                    </div>
+                    <input type="range" id="slider-chunk-size" min="64" max="768" value="256" step="32" class="m3-slider">
+                    <div class="m3-slider-ticks">
+                      <span>64B (Audio/Easy)</span>
+                      <span>256B (Optimal)</span>
+                      <span>768B (Dense)</span>
+                    </div>
+                  </div>
+
+                  <div class="m3-config-heading margin-top-sm">Quick Presets</div>
+                  <div class="m3-presets-row">
+                    <button class="m3-chip-preset" id="preset-mobile-fast">
+                      <span class="material-symbols-outlined">smartphone</span>
+                      <span>Mobile 128B</span>
+                    </button>
+                    <button class="m3-chip-preset active" id="preset-balanced">
+                      <span class="material-symbols-outlined">speed</span>
+                      <span>Balanced 256B</span>
+                    </button>
+                    <button class="m3-chip-preset" id="preset-dense">
+                      <span class="material-symbols-outlined">grid_view</span>
+                      <span>Dense 512B</span>
+                    </button>
+                    <button class="m3-chip-preset" id="preset-audio-modem">
+                      <span class="material-symbols-outlined">graphic_eq</span>
+                      <span>Audio Dialup</span>
+                    </button>
                   </div>
                 </div>
 
-                <!-- Chunk Size Slider -->
-                <div class="m3-slider-group" id="slider-chunk-container">
-                  <div class="m3-slider-label-row">
-                    <span class="m3-label-large">Chunk Size</span>
-                    <span class="m3-badge-value" id="val-chunk-size">256 Bytes</span>
-                  </div>
-                  <input type="range" id="slider-chunk-size" min="64" max="768" value="256" step="32" class="m3-slider">
-                  <div class="m3-slider-ticks">
-                    <span>64B (Audio/Easy)</span>
-                    <span>256B (Optimal)</span>
-                    <span>768B (Dense)</span>
-                  </div>
-                </div>
-
-                <!-- Quick Presets -->
-                <div class="m3-config-heading margin-top-sm">Quick Presets</div>
-                <div class="m3-presets-row">
-                  <button class="m3-chip-preset" id="preset-mobile-fast">
-                    <span class="material-symbols-outlined">smartphone</span>
-                    <span>Mobile 128B</span>
-                  </button>
-                  <button class="m3-chip-preset active" id="preset-balanced">
-                    <span class="material-symbols-outlined">speed</span>
-                    <span>Balanced 256B</span>
-                  </button>
-                  <button class="m3-chip-preset" id="preset-dense">
-                    <span class="material-symbols-outlined">grid_view</span>
-                    <span>Dense 512B</span>
-                  </button>
-                  <button class="m3-chip-preset" id="preset-audio-modem">
-                    <span class="material-symbols-outlined">graphic_eq</span>
-                    <span>Audio Dialup</span>
-                  </button>
-                </div>
               </div>
 
-              <!-- Pair Code Banner -->
+              <!-- Wi-Fi Pair Card -->
               <div class="m3-config-box text-center" id="sender-p2p-card">
                 <div class="m3-config-heading">Wi-Fi Direct Pair Code</div>
                 <div class="m3-pair-code-display" id="pair-code-val">----</div>
-                <p class="m3-body-small color-sub">Enter this 4-digit code on receiver or scan QR to transfer in 1 second over Wi-Fi</p>
+                <p class="m3-body-small color-sub">Enter this 4-digit code on receiver or scan QR to transfer in 1 second</p>
               </div>
 
               <button class="m3-button m3-button-filled m3-full-width" id="btn-start-beam" disabled>
@@ -324,6 +358,15 @@
                 </div>
               </div>
 
+              <!-- Hardware/Radio Status Banner Frame -->
+              <div class="m3-audio-stage-frame" id="sender-hardware-stage" style="display: none;">
+                <div class="text-center padding-md">
+                  <span class="material-symbols-outlined font-xxl color-primary" id="hardware-icon">bluetooth</span>
+                  <h3 class="m3-title-medium margin-top-sm" id="hardware-title">Bluetooth Ready</h3>
+                  <p class="m3-body-small color-sub" id="hardware-desc">Ready to stream data to connected devices.</p>
+                </div>
+              </div>
+
               <!-- Progress Indicator -->
               <div class="m3-progress-wrapper">
                 <div class="m3-linear-progress">
@@ -361,12 +404,12 @@
       <section id="receive-view" class="m3-view">
         <div class="m3-grid-layout">
           
-          <!-- Receiver Pairing / Camera / Audio Column -->
+          <!-- Receiver Pairing / Sensor Column -->
           <div class="m3-grid-col">
             <div class="m3-card m3-card-outlined m3-scanner-card">
               
               <div class="m3-card-header">
-                <h2 class="m3-title-medium">Receive Stream</h2>
+                <h2 class="m3-title-medium">Receive Medium</h2>
                 
                 <div class="m3-segmented-button">
                   <button class="m3-segment-item active" id="rec-mode-camera">
@@ -375,7 +418,19 @@
                   </button>
                   <button class="m3-segment-item" id="rec-mode-audio">
                     <span class="material-symbols-outlined">mic</span>
-                    <span>Audio Mic</span>
+                    <span>Audio</span>
+                  </button>
+                  <button class="m3-segment-item" id="rec-mode-ble">
+                    <span class="material-symbols-outlined">bluetooth_searching</span>
+                    <span>Bluetooth</span>
+                  </button>
+                  <button class="m3-segment-item" id="rec-mode-nfc">
+                    <span class="material-symbols-outlined">nfc</span>
+                    <span>NFC</span>
+                  </button>
+                  <button class="m3-segment-item" id="rec-mode-radio">
+                    <span class="material-symbols-outlined">radio</span>
+                    <span>Radio</span>
                   </button>
                 </div>
               </div>
@@ -434,6 +489,19 @@
                   <button class="m3-button m3-button-filled" id="btn-start-audio-rx">
                     <span class="material-symbols-outlined">mic</span>
                     <span>Listen for Sound</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Hardware Receiver Action Box (BLE / NFC / Radio) -->
+              <div class="m3-audio-rx-container" id="hardware-rx-box" style="display: none;">
+                <div class="text-center padding-md" id="hardware-rx-prompt">
+                  <span class="material-symbols-outlined font-xxl color-primary" id="hardware-rx-icon">bluetooth_searching</span>
+                  <h3 class="m3-title-large margin-top-sm" id="hardware-rx-title">Scan Nearby Devices</h3>
+                  <p class="m3-body-small color-sub margin-bottom-sm" id="hardware-rx-desc">Connect to sender via Bluetooth BLE or Radio Serial.</p>
+                  <button class="m3-button m3-button-filled" id="btn-hardware-action">
+                    <span class="material-symbols-outlined">bluetooth</span>
+                    <span id="btn-hardware-action-text">Pair Device</span>
                   </button>
                 </div>
               </div>
@@ -553,7 +621,7 @@
 
       <button class="m3-bottom-nav-item" data-target="receive-view">
         <div class="nav-icon-pill">
-          <span class="material-symbols-outlined">hearing</span>
+          <span class="material-symbols-outlined">sensors</span>
         </div>
         <span class="nav-label">Receive</span>
       </button>

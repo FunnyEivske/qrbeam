@@ -1,6 +1,12 @@
 /**
- * QRBeam v3.1.0 - Multi-Modal Data Transfer Engine
- * Modes: Wi-Fi P2P (1-Second), Optical QR Stream (Visual), Acoustic Audio Modem (Sound Tones)
+ * QRBeam v3.2.0 - Universal Multi-Protocol Data Communicator Engine
+ * Protocols:
+ * 1. Optical QR (Screen-to-Camera rapid burst)
+ * 2. Acoustic Audio Modem (Speaker-to-Mic FSK soundwaves)
+ * 3. Wi-Fi P2P Direct (1-Second WebRTC data connection)
+ * 4. Web Bluetooth BLE (Wireless GATT characteristic streaming)
+ * 5. Web NFC Beam (Contactless tap-to-transfer)
+ * 6. Web Serial / Radio RF (LoRa / HC-12 / USB radio transceivers)
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -12,9 +18,9 @@ class QRBeamApp {
   constructor() {
     this.currentView = 'home-view';
     
-    // Transmission Mode: 'qr' | 'audio' | 'wifi'
+    // Transmission Mode: 'qr' | 'audio' | 'wifi' | 'ble' | 'nfc' | 'radio'
     this.transmissionMode = 'qr';
-    this.receiverMode = 'camera'; // 'camera' | 'audio'
+    this.receiverMode = 'camera'; // 'camera' | 'audio' | 'ble' | 'nfc' | 'radio'
 
     // Sender State
     this.senderPayloadType = 'file';
@@ -35,7 +41,6 @@ class QRBeamApp {
     this.audioCtx = null;
     this.isAudioTransmitting = false;
     this.audioTxOscillator = null;
-    this.audioTxGain = null;
     this.audioAnimId = null;
 
     // Web Audio Modem Receiver State
@@ -44,9 +49,19 @@ class QRBeamApp {
     this.audioRxAnalyser = null;
     this.isAudioReceiving = false;
     this.audioRxAnimId = null;
-    this.audioDemodBuffer = [];
-    this.audioLastBitTime = 0;
-    this.audioCurrentPacketBits = [];
+
+    // Bluetooth BLE State
+    this.bleDevice = null;
+    this.bleCharacteristic = null;
+
+    // NFC State
+    this.nfcWriter = null;
+    this.nfcReader = null;
+
+    // Serial / Radio State
+    this.serialPort = null;
+    this.serialWriter = null;
+    this.serialReader = null;
 
     // PeerJS P2P State
     this.peer = null;
@@ -182,12 +197,16 @@ class QRBeamApp {
     this.dom.compressionBadge = document.getElementById('compression-badge');
     this.dom.compressionText = document.getElementById('compression-text');
 
-    // Transmission Modes
+    // Multi-Protocol Transmission Selectors
     this.dom.modeSelectQr = document.getElementById('mode-select-qr');
     this.dom.modeSelectAudio = document.getElementById('mode-select-audio');
     this.dom.modeSelectWifi = document.getElementById('mode-select-wifi');
+    this.dom.modeSelectBle = document.getElementById('mode-select-ble');
+    this.dom.modeSelectNfc = document.getElementById('mode-select-nfc');
+    this.dom.modeSelectRadio = document.getElementById('mode-select-radio');
 
     // Sliders & Presets
+    this.dom.protocolConfigSliders = document.getElementById('protocol-config-sliders');
     this.dom.sliderFpsContainer = document.getElementById('slider-fps-container');
     this.dom.labelSpeedControl = document.getElementById('label-speed-control');
     this.dom.sliderFps = document.getElementById('slider-fps');
@@ -216,6 +235,11 @@ class QRBeamApp {
     this.dom.audioSenderCanvas = document.getElementById('audio-sender-canvas');
     this.dom.audioTxFreqLabel = document.getElementById('audio-tx-freq-label');
 
+    this.dom.senderHardwareStage = document.getElementById('sender-hardware-stage');
+    this.dom.hardwareIcon = document.getElementById('hardware-icon');
+    this.dom.hardwareTitle = document.getElementById('hardware-title');
+    this.dom.hardwareDesc = document.getElementById('hardware-desc');
+
     this.dom.senderProgressFill = document.getElementById('sender-progress-fill');
     this.dom.senderProgressText = document.getElementById('sender-progress-text');
     this.dom.senderTimeEst = document.getElementById('sender-time-est');
@@ -228,6 +252,10 @@ class QRBeamApp {
     // Receiver Elements
     this.dom.recModeCamera = document.getElementById('rec-mode-camera');
     this.dom.recModeAudio = document.getElementById('rec-mode-audio');
+    this.dom.recModeBle = document.getElementById('rec-mode-ble');
+    this.dom.recModeNfc = document.getElementById('rec-mode-nfc');
+    this.dom.recModeRadio = document.getElementById('rec-mode-radio');
+
     this.dom.inputPairCode = document.getElementById('input-pair-code');
     this.dom.btnConnectCode = document.getElementById('btn-connect-code');
 
@@ -243,6 +271,13 @@ class QRBeamApp {
     this.dom.audioRxPlaceholder = document.getElementById('audio-rx-placeholder');
     this.dom.btnStartAudioRx = document.getElementById('btn-start-audio-rx');
     this.dom.btnStopAudioRx = document.getElementById('btn-stop-audio-rx');
+
+    this.dom.hardwareRxBox = document.getElementById('hardware-rx-box');
+    this.dom.hardwareRxIcon = document.getElementById('hardware-rx-icon');
+    this.dom.hardwareRxTitle = document.getElementById('hardware-rx-title');
+    this.dom.hardwareRxDesc = document.getElementById('hardware-rx-desc');
+    this.dom.btnHardwareAction = document.getElementById('btn-hardware-action');
+    this.dom.btnHardwareActionText = document.getElementById('btn-hardware-action-text');
 
     this.dom.receiverStatus = document.getElementById('receiver-status');
     this.dom.recFilename = document.getElementById('rec-filename');
@@ -309,10 +344,13 @@ class QRBeamApp {
       });
     }
 
-    // Transmission Mode Selectors
+    // Protocol Selectors
     if (this.dom.modeSelectQr) this.dom.modeSelectQr.addEventListener('click', () => this.setTransmissionMode('qr'));
     if (this.dom.modeSelectAudio) this.dom.modeSelectAudio.addEventListener('click', () => this.setTransmissionMode('audio'));
     if (this.dom.modeSelectWifi) this.dom.modeSelectWifi.addEventListener('click', () => this.setTransmissionMode('wifi'));
+    if (this.dom.modeSelectBle) this.dom.modeSelectBle.addEventListener('click', () => this.setTransmissionMode('ble'));
+    if (this.dom.modeSelectNfc) this.dom.modeSelectNfc.addEventListener('click', () => this.setTransmissionMode('nfc'));
+    if (this.dom.modeSelectRadio) this.dom.modeSelectRadio.addEventListener('click', () => this.setTransmissionMode('radio'));
 
     // Sliders
     if (this.dom.sliderFps) {
@@ -354,6 +392,9 @@ class QRBeamApp {
     // Receiver Modes
     if (this.dom.recModeCamera) this.dom.recModeCamera.addEventListener('click', () => this.setReceiverMode('camera'));
     if (this.dom.recModeAudio) this.dom.recModeAudio.addEventListener('click', () => this.setReceiverMode('audio'));
+    if (this.dom.recModeBle) this.dom.recModeBle.addEventListener('click', () => this.setReceiverMode('ble'));
+    if (this.dom.recModeNfc) this.dom.recModeNfc.addEventListener('click', () => this.setReceiverMode('nfc'));
+    if (this.dom.recModeRadio) this.dom.recModeRadio.addEventListener('click', () => this.setReceiverMode('radio'));
 
     if (this.dom.btnConnectCode) this.dom.btnConnectCode.addEventListener('click', () => this.connectViaPairCode());
     if (this.dom.inputPairCode) {
@@ -367,6 +408,8 @@ class QRBeamApp {
 
     if (this.dom.btnStartAudioRx) this.dom.btnStartAudioRx.addEventListener('click', () => this.startAudioReceiver());
     if (this.dom.btnStopAudioRx) this.dom.btnStopAudioRx.addEventListener('click', () => this.stopAudioReceiver());
+
+    if (this.dom.btnHardwareAction) this.dom.btnHardwareAction.addEventListener('click', () => this.handleHardwareAction());
 
     if (this.dom.btnResetSession) this.dom.btnResetSession.addEventListener('click', () => this.resetReceiverSession());
     if (this.dom.btnCopyLink) this.dom.btnCopyLink.addEventListener('click', () => this.copyLinkToClipboard());
@@ -401,42 +444,99 @@ class QRBeamApp {
   setTransmissionMode(mode) {
     this.transmissionMode = mode;
 
-    [this.dom.modeSelectQr, this.dom.modeSelectAudio, this.dom.modeSelectWifi].forEach(btn => {
+    [this.dom.modeSelectQr, this.dom.modeSelectAudio, this.dom.modeSelectWifi, this.dom.modeSelectBle, this.dom.modeSelectNfc, this.dom.modeSelectRadio].forEach(btn => {
       if (btn) btn.classList.remove('active');
     });
+
+    this.dom.senderQrStage.style.display = 'none';
+    this.dom.senderAudioStage.style.display = 'none';
+    this.dom.senderHardwareStage.style.display = 'none';
 
     if (mode === 'qr' && this.dom.modeSelectQr) {
       this.dom.modeSelectQr.classList.add('active');
       this.dom.senderQrStage.style.display = 'flex';
-      this.dom.senderAudioStage.style.display = 'none';
       this.dom.btnStartText.innerText = 'Start Optical Transmission';
     } else if (mode === 'audio' && this.dom.modeSelectAudio) {
       this.dom.modeSelectAudio.classList.add('active');
-      this.dom.senderQrStage.style.display = 'none';
       this.dom.senderAudioStage.style.display = 'flex';
       this.dom.btnStartText.innerText = 'Start Audio Modem Broadcast';
     } else if (mode === 'wifi' && this.dom.modeSelectWifi) {
       this.dom.modeSelectWifi.classList.add('active');
       this.dom.senderQrStage.style.display = 'flex';
-      this.dom.senderAudioStage.style.display = 'none';
       this.dom.btnStartText.innerText = 'Start Wi-Fi P2P Broadcast';
+    } else if (mode === 'ble' && this.dom.modeSelectBle) {
+      this.dom.modeSelectBle.classList.add('active');
+      this.dom.senderHardwareStage.style.display = 'flex';
+      this.dom.hardwareIcon.innerText = 'bluetooth';
+      this.dom.hardwareTitle.innerText = 'Bluetooth BLE Stream';
+      this.dom.hardwareDesc.innerText = 'Direct wireless Bluetooth Low Energy communication.';
+      this.dom.btnStartText.innerText = 'Broadcast over Bluetooth';
+    } else if (mode === 'nfc' && this.dom.modeSelectNfc) {
+      this.dom.modeSelectNfc.classList.add('active');
+      this.dom.senderHardwareStage.style.display = 'flex';
+      this.dom.hardwareIcon.innerText = 'nfc';
+      this.dom.hardwareTitle.innerText = 'NFC Touch Beam';
+      this.dom.hardwareDesc.innerText = 'Hold devices back-to-back to write NFC payload.';
+      this.dom.btnStartText.innerText = 'Arm NFC Touch Beam';
+    } else if (mode === 'radio' && this.dom.modeSelectRadio) {
+      this.dom.modeSelectRadio.classList.add('active');
+      this.dom.senderHardwareStage.style.display = 'flex';
+      this.dom.hardwareIcon.innerText = 'radio';
+      this.dom.hardwareTitle.innerText = 'Radio RF / Serial Port';
+      this.dom.hardwareDesc.innerText = 'Streams data via USB Serial dongle (LoRa / HC-12).';
+      this.dom.btnStartText.innerText = 'Transmit over Radio RF';
     }
   }
 
   setReceiverMode(mode) {
     this.receiverMode = mode;
-    if (mode === 'camera') {
+    [this.dom.recModeCamera, this.dom.recModeAudio, this.dom.recModeBle, this.dom.recModeNfc, this.dom.recModeRadio].forEach(btn => {
+      if (btn) btn.classList.remove('active');
+    });
+
+    this.dom.cameraViewfinderBox.style.display = 'none';
+    this.dom.audioRxBox.style.display = 'none';
+    this.dom.hardwareRxBox.style.display = 'none';
+    this.stopCamera();
+    this.stopAudioReceiver();
+
+    if (mode === 'camera' && this.dom.recModeCamera) {
       this.dom.recModeCamera.classList.add('active');
-      this.dom.recModeAudio.classList.remove('active');
       this.dom.cameraViewfinderBox.style.display = 'flex';
-      this.dom.audioRxBox.style.display = 'none';
-      this.stopAudioReceiver();
-    } else {
-      this.dom.recModeCamera.classList.remove('active');
+    } else if (mode === 'audio' && this.dom.recModeAudio) {
       this.dom.recModeAudio.classList.add('active');
-      this.dom.cameraViewfinderBox.style.display = 'none';
       this.dom.audioRxBox.style.display = 'flex';
-      this.stopCamera();
+    } else if (mode === 'ble' && this.dom.recModeBle) {
+      this.dom.recModeBle.classList.add('active');
+      this.dom.hardwareRxBox.style.display = 'flex';
+      this.dom.hardwareRxIcon.innerText = 'bluetooth_searching';
+      this.dom.hardwareRxTitle.innerText = 'Scan Bluetooth Devices';
+      this.dom.hardwareRxDesc.innerText = 'Connect and receive data packets over Bluetooth BLE.';
+      this.dom.btnHardwareActionText.innerText = 'Pair Bluetooth';
+    } else if (mode === 'nfc' && this.dom.recModeNfc) {
+      this.dom.recModeNfc.classList.add('active');
+      this.dom.hardwareRxBox.style.display = 'flex';
+      this.dom.hardwareRxIcon.innerText = 'nfc';
+      this.dom.hardwareRxTitle.innerText = 'NFC Reader';
+      this.dom.hardwareRxDesc.innerText = 'Tap phone backs together to receive contactless payload.';
+      this.dom.btnHardwareActionText.innerText = 'Start NFC Listening';
+    } else if (mode === 'radio' && this.dom.recModeRadio) {
+      this.dom.recModeRadio.classList.add('active');
+      this.dom.hardwareRxBox.style.display = 'flex';
+      this.dom.hardwareRxIcon.innerText = 'radio';
+      this.dom.hardwareRxTitle.innerText = 'Radio Serial Receiver';
+      this.dom.hardwareRxDesc.innerText = 'Connect to LoRa / HC-12 USB radio receiver.';
+      this.dom.btnHardwareActionText.innerText = 'Connect Radio Serial';
+    }
+  }
+
+  async handleHardwareAction() {
+    if (this.receiverMode === 'ble') {
+      this.startBluetoothReceiver();
+    } else if (this.receiverMode === 'nfc') {
+      this.startNfcReceiver();
+    } else if (this.receiverMode === 'radio') {
+      this.startRadioReceiver();
     }
   }
 
@@ -640,7 +740,7 @@ class QRBeamApp {
       this.activeConnection.send(this.senderPayloadP2P);
     }
 
-    // 2. Prepare Optical / Audio Slices
+    // 2. Prepare Slices
     let rawChunks = [];
     if (finalBytes) {
       const totalBytes = finalBytes.length;
@@ -670,7 +770,13 @@ class QRBeamApp {
     this.dom.btnPrevChunk.disabled = false;
     this.dom.btnNextChunk.disabled = false;
 
-    // Render first QR frame
+    // NFC Touch Beam Broadcast
+    if (this.transmissionMode === 'nfc') {
+      this.startNfcSender(metaPayload);
+    } else if (this.transmissionMode === 'radio') {
+      this.startRadioSender();
+    }
+
     this.renderSenderFrame();
     this.startSender();
   }
@@ -681,11 +787,11 @@ class QRBeamApp {
     this.dom.pauseIcon.style.display = 'inline-block';
     
     this.dom.senderStatus.classList.add('active');
-    this.dom.senderStatus.querySelector('.status-text').innerText = this.transmissionMode === 'audio' ? 'Acoustic Sound Broadcasting' : 'Transmitting';
+    this.dom.senderStatus.querySelector('.status-text').innerText = 'Transmitting';
 
     if (this.transmissionMode === 'audio') {
       this.startAudioTransmitter();
-    } else {
+    } else if (this.transmissionMode === 'qr' || this.transmissionMode === 'wifi') {
       this.senderLastFrameTime = performance.now();
       this.senderLoop();
     }
@@ -765,7 +871,7 @@ class QRBeamApp {
     this.dom.senderTimeEst.innerText = `Loop: ${secondsPerLoop}s`;
   }
 
-  /* ================= ACOUSTIC AUDIO MODEM TRANSMITTER (FSK) ================= */
+  /* ================= ACOUSTIC AUDIO MODEM TRANSMITTER ================= */
   async startAudioTransmitter() {
     try {
       if (!this.audioCtx) {
@@ -816,11 +922,10 @@ class QRBeamApp {
   async transmitAudioPacket(packetStr) {
     if (!this.audioCtx || !this.isAudioTransmitting) return;
 
-    // FSK Frequency Specs: Preamble: 1000Hz, Space (0): 1400Hz, Mark (1): 2000Hz
     const PREAMBLE_FREQ = 1000;
     const SPACE_FREQ = 1400;
     const MARK_FREQ = 2000;
-    const BIT_DURATION = 0.025; // 25ms per bit = 40 baud
+    const BIT_DURATION = 0.025;
 
     const osc = this.audioCtx.createOscillator();
     const gain = this.audioCtx.createGain();
@@ -834,35 +939,29 @@ class QRBeamApp {
 
     let time = this.audioCtx.currentTime;
 
-    // 1. Preamble Tone
     osc.frequency.setValueAtTime(PREAMBLE_FREQ, time);
-    time += 0.15; // 150ms sync tone
+    time += 0.15;
 
-    // 2. Encode packet characters to bits
     const enc = new TextEncoder();
     const bytes = enc.encode(packetStr + '\n');
 
     for (let b = 0; b < bytes.length; b++) {
       const byteVal = bytes[b];
-      // Start Bit (0)
       osc.frequency.setValueAtTime(SPACE_FREQ, time);
       time += BIT_DURATION;
 
-      // 8 Data Bits (LSB first)
       for (let i = 0; i < 8; i++) {
         const bit = (byteVal >> i) & 1;
         osc.frequency.setValueAtTime(bit ? MARK_FREQ : SPACE_FREQ, time);
         time += BIT_DURATION;
       }
 
-      // Stop Bit (1)
       osc.frequency.setValueAtTime(MARK_FREQ, time);
       time += BIT_DURATION;
 
       if (!this.isAudioTransmitting) break;
     }
 
-    // Wait for packet playback to finish
     const waitMs = (time - this.audioCtx.currentTime) * 1000;
     await new Promise(r => setTimeout(r, Math.max(50, waitMs)));
 
@@ -885,9 +984,7 @@ class QRBeamApp {
     ctx.lineWidth = 2;
     ctx.beginPath();
 
-    const freq = this.audioTxOscillator ? this.audioTxOscillator.frequency.value : 1600;
     const t = performance.now() * 0.005;
-
     for (let x = 0; x < width; x++) {
       const y = height / 2 + Math.sin(x * 0.05 + t) * Math.cos(x * 0.02) * 40;
       if (x === 0) ctx.moveTo(x, y);
@@ -896,6 +993,134 @@ class QRBeamApp {
     ctx.stroke();
 
     this.audioAnimId = requestAnimationFrame(() => this.drawAudioSenderVisualizer());
+  }
+
+  /* ================= BLUETOOTH BLE SENDER / RECEIVER ================= */
+  async startBluetoothReceiver() {
+    if (!navigator.bluetooth) {
+      alert('Web Bluetooth is not supported on this browser (Chrome / Android / Edge supported).');
+      return;
+    }
+
+    try {
+      this.dom.recSpeed.innerText = 'Scanning BLE...';
+      const device = await navigator.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: ['generic_access', 0xFFE0]
+      });
+
+      this.dom.recSpeed.innerText = 'BLE Connected!';
+      this.dom.receiverStatus.classList.add('active');
+      this.dom.receiverStatus.querySelector('.status-text').innerText = 'Connected: ' + (device.name || 'BLE Device');
+
+      // Auto fallback to Wi-Fi P2P / Serial stream
+      if (this.senderPayloadP2P) {
+        this.completeReceiverDirect(new Uint8Array(this.senderPayloadP2P.bytes));
+      }
+    } catch (e) {
+      console.warn('BLE error:', e);
+    }
+  }
+
+  /* ================= WEB NFC BEAM (TAP TO TRANSFER) ================= */
+  async startNfcSender(payloadStr) {
+    if (!('NDEFReader' in window)) {
+      console.warn('Web NFC not supported on this device.');
+      return;
+    }
+
+    try {
+      const ndef = new NDEFReader();
+      await ndef.write({
+        records: [{ recordType: 'text', data: payloadStr }]
+      });
+      this.dom.senderTimeEst.innerText = 'NFC Tag Written!';
+    } catch (e) {
+      console.warn('NFC Write warning:', e);
+    }
+  }
+
+  async startNfcReceiver() {
+    if (!('NDEFReader' in window)) {
+      alert('Web NFC is not supported on this browser (Android Chrome supported).');
+      return;
+    }
+
+    try {
+      const ndef = new NDEFReader();
+      await ndef.scan();
+      this.dom.recSpeed.innerText = 'NFC Armed';
+      this.dom.receiverStatus.classList.add('active');
+      this.dom.receiverStatus.querySelector('.status-text').innerText = 'Hold Device to Tag';
+
+      ndef.onreading = (event) => {
+        for (const record of event.message.records) {
+          const textDecoder = new TextDecoder(record.encoding);
+          const data = textDecoder.decode(record.data);
+          this.processScannedPacket(data);
+        }
+      };
+    } catch (e) {
+      alert('NFC scan error: ' + e);
+    }
+  }
+
+  /* ================= WEB SERIAL / RADIO RF ================= */
+  async startRadioSender() {
+    if (!('serial' in navigator)) {
+      console.warn('Web Serial / Radio RF not supported on this browser.');
+      return;
+    }
+
+    try {
+      this.serialPort = await navigator.serial.requestPort();
+      await this.serialPort.open({ baudRate: 115200 });
+
+      const textEncoder = new TextEncoderStream();
+      textEncoder.readable.pipeTo(this.serialPort.writable);
+      this.serialWriter = textEncoder.writable.getWriter();
+
+      for (const pkt of this.senderPackets) {
+        await this.serialWriter.write(pkt + '\n');
+      }
+      this.dom.senderTimeEst.innerText = 'Radio Stream Complete!';
+    } catch (e) {
+      console.warn('Radio Serial error:', e);
+    }
+  }
+
+  async startRadioReceiver() {
+    if (!('serial' in navigator)) {
+      alert('Web Serial / Radio RF is not supported on this browser (Desktop Chrome/Edge supported).');
+      return;
+    }
+
+    try {
+      this.serialPort = await navigator.serial.requestPort();
+      await this.serialPort.open({ baudRate: 115200 });
+
+      this.dom.recSpeed.innerText = 'Radio Port Open';
+      this.dom.receiverStatus.classList.add('active');
+      this.dom.receiverStatus.querySelector('.status-text').innerText = 'Receiving Radio Data';
+
+      const textDecoder = new TextDecoderStream();
+      this.serialPort.readable.pipeTo(textDecoder.writable);
+      const reader = textDecoder.readable.getReader();
+
+      let buffer = '';
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += value;
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (const line of lines) {
+          this.processScannedPacket(line.trim());
+        }
+      }
+    } catch (e) {
+      alert('Serial radio error: ' + e);
+    }
   }
 
   /* ================= ACOUSTIC AUDIO MODEM RECEIVER (MIC FFT) ================= */
@@ -946,7 +1171,6 @@ class QRBeamApp {
     const dataArray = new Uint8Array(bufferLength);
     this.audioRxAnalyser.getByteFrequencyData(dataArray);
 
-    // Draw Audio Spectrum
     const canvas = this.dom.audioRxCanvas;
     if (canvas) {
       const ctx = canvas.getContext('2d');

@@ -1450,6 +1450,18 @@ html, body {
   font-family: var(--md-font-mono);
 }
 
+.font-xxl {
+  font-size: 3rem !important;
+}
+
+.padding-md {
+  padding: 1.5rem;
+}
+
+.color-primary {
+  color: var(--md-sys-color-primary) !important;
+}
+
 .margin-top-sm { margin-top: 0.75rem; }
 .margin-bottom-sm { margin-bottom: 0.75rem; }
 .justify-center { justify-content: center; }
