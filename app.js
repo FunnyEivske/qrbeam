@@ -1,12 +1,6 @@
 /**
- * QRBeam v3.2.0 - Universal Multi-Protocol Data Communicator Engine
- * Protocols:
- * 1. Optical QR (Screen-to-Camera rapid burst)
- * 2. Acoustic Audio Modem (Speaker-to-Mic FSK soundwaves)
- * 3. Wi-Fi P2P Direct (1-Second WebRTC data connection)
- * 4. Web Bluetooth BLE (Wireless GATT characteristic streaming)
- * 5. Web NFC Beam (Contactless tap-to-transfer)
- * 6. Web Serial / Radio RF (LoRa / HC-12 / USB radio transceivers)
+ * QRBeam v3.3.0 - Universal Multi-Protocol Data Communicator
+ * Protocols: Optical QR, Acoustic Audio Modem, Wi-Fi Direct P2P, Bluetooth BLE, NFC, Radio Serial
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -18,8 +12,8 @@ class QRBeamApp {
   constructor() {
     this.currentView = 'home-view';
     
-    // Transmission Mode: 'qr' | 'audio' | 'wifi' | 'ble' | 'nfc' | 'radio'
-    this.transmissionMode = 'qr';
+    // Transmission & Reception Modes
+    this.transmissionMode = 'qr'; // 'qr' | 'audio' | 'wifi' | 'ble' | 'nfc' | 'radio'
     this.receiverMode = 'camera'; // 'camera' | 'audio' | 'ble' | 'nfc' | 'radio'
 
     // Sender State
@@ -54,14 +48,9 @@ class QRBeamApp {
     this.bleDevice = null;
     this.bleCharacteristic = null;
 
-    // NFC State
-    this.nfcWriter = null;
-    this.nfcReader = null;
-
     // Serial / Radio State
     this.serialPort = null;
     this.serialWriter = null;
-    this.serialReader = null;
 
     // PeerJS P2P State
     this.peer = null;
@@ -180,6 +169,7 @@ class QRBeamApp {
     this.dom.btnGotoSend = document.getElementById('btn-goto-send');
     this.dom.btnGotoReceive = document.getElementById('btn-goto-receive');
 
+    // Sender Elements
     this.dom.modeFileBtn = document.getElementById('input-mode-file');
     this.dom.modeLinkBtn = document.getElementById('input-mode-link');
     this.dom.fileSection = document.getElementById('file-input-section');
@@ -1157,7 +1147,7 @@ class QRBeamApp {
     }
   }
 
-  /* ================= ACOUSTIC AUDIO MODEM RECEIVER (MIC FFT) ================= */
+  /* ================= ACOUSTIC AUDIO MODEM RECEIVER ================= */
   async startAudioReceiver() {
     try {
       this.audioRxCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1174,9 +1164,9 @@ class QRBeamApp {
       source.connect(this.audioRxAnalyser);
 
       this.isAudioReceiving = true;
-      this.dom.audioRxPlaceholder.style.display = 'none';
+      if (this.dom.audioRxPlaceholder) this.dom.audioRxPlaceholder.style.display = 'none';
       if (this.dom.audioRxHud) this.dom.audioRxHud.style.display = 'flex';
-      this.dom.btnStopAudioRx.style.display = 'flex';
+      if (this.dom.btnStopAudioRx) this.dom.btnStopAudioRx.style.display = 'flex';
       this.dom.receiverStatus.classList.add('active');
       this.dom.receiverStatus.querySelector('.status-text').innerText = 'Listening for Modem Tones';
 
