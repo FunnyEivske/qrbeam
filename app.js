@@ -1,6 +1,6 @@
 /**
  * QRBeam - High-Speed Mobile-Optimized Data Transfer Engine
- * Features: 100% Offline RGB 3-in-1 Channel Multiplexing, WebRTC P2P Handoff, Native GZIP Compression, Web Worker scanning, 2D Canvas matrix.
+ * Features: Default RGB 3-in-1 Multi-Color Multiplexing, WebRTC P2P Handoff, Native GZIP Compression, Web Worker scanning, 2D Canvas matrix.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -12,14 +12,14 @@ class QRBeamApp {
   constructor() {
     this.currentView = 'home-view';
     
-    // Sender State
+    // Sender State (Default to RGB Multi-Color 3x Mode)
     this.senderMode = 'file';
     this.selectedFile = null;
     this.selectedFileBuffer = null;
     this.linkText = '';
-    this.senderFps = 12;
-    this.senderChunkSize = 256;
-    this.isRgbMode = false;
+    this.senderFps = 15;
+    this.senderChunkSize = 384;
+    this.isRgbMode = true; // DEFAULT TO MULTI-COLOR RGB STREAM!
     this.senderPackets = [];
     this.senderCurrentIndex = 0;
     this.senderIsPlaying = false;
@@ -310,7 +310,7 @@ class QRBeamApp {
 
     this.dom.presetMobileFast.addEventListener('click', () => this.applyPreset(256, 12, false, this.dom.presetMobileFast));
     if (this.dom.presetRgbTurbo) {
-      this.dom.presetRgbTurbo.addEventListener('click', () => this.applyPreset(384, 18, true, this.dom.presetRgbTurbo));
+      this.dom.presetRgbTurbo.addEventListener('click', () => this.applyPreset(384, 15, true, this.dom.presetRgbTurbo));
     }
     this.dom.presetDense.addEventListener('click', () => this.applyPreset(768, 15, false, this.dom.presetDense));
 
@@ -578,7 +578,7 @@ class QRBeamApp {
     this.dom.pauseIcon.style.display = 'inline-block';
     
     this.dom.senderStatus.classList.add('active');
-    this.dom.senderStatus.querySelector('.status-text').innerText = this.isRgbMode ? 'Transmitting (RGB 3x)' : 'Transmitting';
+    this.dom.senderStatus.querySelector('.status-text').innerText = this.isRgbMode ? 'Transmitting (Multi-Color RGB 3x)' : 'Transmitting';
 
     this.senderLastFrameTime = performance.now();
     this.senderLoop();
@@ -637,7 +637,6 @@ class QRBeamApp {
     const ctx = canvas.getContext('2d');
 
     if (!this.isRgbMode) {
-      // Standard Black & White Frame
       const packet = this.senderPackets[this.senderCurrentIndex];
       QRCode.toCanvas(canvas, packet, {
         errorCorrectionLevel: 'L',
@@ -646,12 +645,11 @@ class QRBeamApp {
         color: { dark: '#000000', light: '#ffffff' }
       });
     } else {
-      // RGB 3-in-1 Channel Multiplexed Frame
+      // Multi-Color RGB 3-in-1 Channel Multiplexed Frame
       const p1 = this.senderPackets[this.senderCurrentIndex % total];
       const p2 = this.senderPackets[(this.senderCurrentIndex + 1) % total];
       const p3 = this.senderPackets[(this.senderCurrentIndex + 2) % total];
 
-      // Draw QR 1 to Red offscreen canvas
       QRCode.toCanvas(this.offCanvas1, p1, { errorCorrectionLevel: 'L', margin: 1, width: 400 });
       QRCode.toCanvas(this.offCanvas2, p2, { errorCorrectionLevel: 'L', margin: 1, width: 400 });
       QRCode.toCanvas(this.offCanvas3, p3, { errorCorrectionLevel: 'L', margin: 1, width: 400 });

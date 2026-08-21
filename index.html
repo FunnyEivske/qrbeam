@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>QRBeam - Material 3 Offline RGB Turbo Data Transfer</title>
-  <meta name="description" content="Transfer files and links between any device offline using high-speed RGB color-channel multiplexed QR codes and camera scanning.">
+  <title>QRBeam - RGB Multi-Color Optical Data Transfer</title>
+  <meta name="description" content="Transfer files and links between any device offline using high-speed RGB 3-in-1 multi-color QR codes and camera scanning.">
   
   <!-- Google Fonts: Plus Jakarta Sans & Material Symbols -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -34,11 +34,11 @@
     <header class="m3-top-app-bar">
       <div class="m3-brand" id="logo-btn">
         <div class="m3-brand-icon">
-          <span class="material-symbols-outlined">qr_code_2</span>
+          <span class="material-symbols-outlined">palette</span>
         </div>
         <div class="m3-brand-title">
           <span class="title-main">QR<span class="title-accent">Beam</span></span>
-          <span class="m3-chip-expressive">RGB 3X OFFLINE</span>
+          <span class="m3-chip-expressive">RGB MULTI-COLOR 3X</span>
         </div>
       </div>
 
@@ -72,16 +72,16 @@
         <div class="m3-hero-expressive">
           <div class="m3-badge-pill">
             <span class="m3-dot-pulse"></span>
-            <span>100% Offline RGB Channel Multiplexing</span>
+            <span>RGB Multi-Color Channel Multiplexing</span>
           </div>
 
           <h1 class="m3-display-large">
             Transfer Data Over Video <br>
-            <span class="m3-gradient-text">Zero Wi-Fi. Zero Cell Data. 3x Speed.</span>
+            <span class="m3-gradient-text">Multi-Color RGB. 3x Offline Speed.</span>
           </h1>
 
           <p class="m3-body-large">
-            No Wi-Fi? No cellular network? QRBeam uses RGB color-channel multiplexing to pack 3 independent QR codes into every frame, tripling offline optical bandwidth.
+            QRBeam encodes 3 QR codes into Red, Green, and Blue light channels simultaneously, creating vibrant multi-color matrix streams that transfer 3x faster offline.
           </p>
 
           <!-- Expressive Action Cards -->
@@ -90,11 +90,11 @@
             <div class="m3-card m3-card-elevated m3-hero-card" id="btn-goto-send">
               <div class="card-state-layer"></div>
               <div class="m3-icon-container primary">
-                <span class="material-symbols-outlined">upload_file</span>
+                <span class="material-symbols-outlined">palette</span>
               </div>
               <div class="m3-card-body">
                 <h3 class="m3-title-large">Send File or Link</h3>
-                <p class="m3-body-medium">Encode any file into a high-density RGB multiplexed QR code sequence.</p>
+                <p class="m3-body-medium">Encode any file into a multi-color RGB multiplexed QR stream.</p>
               </div>
               <div class="m3-card-action">
                 <button class="m3-button m3-button-filled">
@@ -128,22 +128,22 @@
             <div class="m3-feature-chip">
               <span class="material-symbols-outlined">palette</span>
               <div>
-                <strong>RGB 3x Multiplexing</strong>
-                <p>Red, Green, Blue channels carry 3 QR codes per frame for 3x speed.</p>
+                <strong>Multi-Color RGB Stream</strong>
+                <p>Red, Green, Blue light channels carry 3 QR codes per frame.</p>
               </div>
             </div>
             <div class="m3-feature-chip">
               <span class="material-symbols-outlined">signal_cellular_off</span>
               <div>
                 <strong>100% Offline</strong>
-                <p>Works in remote locations with no cellular signal or Wi-Fi.</p>
+                <p>Works in remote locations with zero cellular signal or Wi-Fi.</p>
               </div>
             </div>
             <div class="m3-feature-chip">
               <span class="material-symbols-outlined">phone_iphone</span>
               <div>
                 <strong>Mobile Optimized</strong>
-                <p>Tailored mobile views and low-density QR modes.</p>
+                <p>Tailored mobile views and 48px touch controls.</p>
               </div>
             </div>
           </div>
@@ -184,7 +184,7 @@
                     </div>
                     <h4 class="m3-title-medium">Tap or Drag File Here</h4>
                     <p class="m3-body-small">Select any file to encode & compress</p>
-                    <span class="m3-label-small">Works 100% offline without network</span>
+                    <span class="m3-label-small">Smart GZIP + Multi-Color RGB active</span>
                   </div>
 
                   <!-- File Selected Banner -->
@@ -217,19 +217,19 @@
 
               <!-- Speed & Density Presets for Mobile -->
               <div class="m3-config-box">
-                <div class="m3-config-heading">Preset Optimization</div>
+                <div class="m3-config-heading">Transmission Preset</div>
                 <div class="m3-presets-row">
-                  <button class="m3-chip-preset active" id="preset-mobile-fast">
-                    <span class="material-symbols-outlined">smartphone</span>
-                    <span>Mobile Fast (256B)</span>
-                  </button>
-                  <button class="m3-chip-preset" id="preset-rgb-turbo">
+                  <button class="m3-chip-preset active" id="preset-rgb-turbo">
                     <span class="material-symbols-outlined">palette</span>
-                    <span>RGB 3x Turbo (Offline)</span>
+                    <span>Multi-Color RGB (3x Speed)</span>
+                  </button>
+                  <button class="m3-chip-preset" id="preset-mobile-fast">
+                    <span class="material-symbols-outlined">smartphone</span>
+                    <span>B&W Fast (256B)</span>
                   </button>
                   <button class="m3-chip-preset" id="preset-dense">
                     <span class="material-symbols-outlined">grid_view</span>
-                    <span>Dense (768B)</span>
+                    <span>B&W Dense (768B)</span>
                   </button>
                 </div>
 
@@ -237,12 +237,12 @@
                 <div class="m3-slider-group">
                   <div class="m3-slider-label-row">
                     <span class="m3-label-large">Frame Rate (Speed)</span>
-                    <span class="m3-badge-value" id="val-fps">12 FPS</span>
+                    <span class="m3-badge-value" id="val-fps">15 FPS</span>
                   </div>
-                  <input type="range" id="slider-fps" min="2" max="25" value="12" step="1" class="m3-slider">
+                  <input type="range" id="slider-fps" min="2" max="25" value="15" step="1" class="m3-slider">
                   <div class="m3-slider-ticks">
                     <span>2 FPS</span>
-                    <span>12 FPS (Recommended)</span>
+                    <span>15 FPS (Recommended)</span>
                     <span>25 FPS</span>
                   </div>
                 </div>
@@ -251,20 +251,20 @@
                 <div class="m3-slider-group">
                   <div class="m3-slider-label-row">
                     <span class="m3-label-large">Chunk Size (Bytes)</span>
-                    <span class="m3-badge-value" id="val-chunk-size">256 Bytes</span>
+                    <span class="m3-badge-value" id="val-chunk-size">384 Bytes</span>
                   </div>
-                  <input type="range" id="slider-chunk-size" min="128" max="768" value="256" step="64" class="m3-slider">
+                  <input type="range" id="slider-chunk-size" min="128" max="768" value="384" step="64" class="m3-slider">
                   <div class="m3-slider-ticks">
-                    <span>128B (Easy Scan)</span>
-                    <span>256B</span>
-                    <span>768B (Dense)</span>
+                    <span>128B</span>
+                    <span>384B</span>
+                    <span>768B</span>
                   </div>
                 </div>
               </div>
 
               <button class="m3-button m3-button-filled m3-full-width" id="btn-start-beam" disabled>
                 <span class="material-symbols-outlined">play_arrow</span>
-                <span>Start Transmission</span>
+                <span>Start Multi-Color Transmission</span>
               </button>
 
             </div>
@@ -282,12 +282,12 @@
                 <div class="m3-counter-pill" id="sender-chunk-badge">Chunk --/--</div>
               </div>
 
-              <!-- Responsive QR Stage -->
+              <!-- Responsive Multi-Color QR Stage -->
               <div class="m3-qr-frame">
                 <canvas id="qr-canvas" width="400" height="400"></canvas>
                 <div class="m3-qr-placeholder" id="qr-placeholder">
-                  <span class="material-symbols-outlined placeholder-icon">qr_code_2</span>
-                  <p class="m3-body-medium">Select a payload to start transmission</p>
+                  <span class="material-symbols-outlined placeholder-icon">palette</span>
+                  <p class="m3-body-medium">Select a payload to start Multi-Color RGB transmission</p>
                 </div>
               </div>
 
