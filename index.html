@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QRBeam - Material 3 Expressive Data Transfer</title>
+  <meta name="description" content="Transfer files and links between any device using high-speed repeating QR codes and camera scanning. Material 3 Expressive Edition.">
+  
+  <!-- Google Fonts: Plus Jakarta Sans & Material Symbols -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=JetBrains+Mono:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="index.css">
+
+  <!-- QRCode generator library -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+  <!-- jsQR decoder library -->
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+</head>
+<body>
+  <!-- Ambient Expressive Dynamic Background -->
+  <div class="m3-background">
+    <div class="m3-blob blob-primary"></div>
+    <div class="m3-blob blob-secondary"></div>
+    <div class="m3-blob blob-tertiary"></div>
+  </div>
+
+  <div class="m3-app-shell">
+    
+    <!-- Material 3 Expressive Top App Bar -->
+    <header class="m3-top-app-bar">
+      <div class="m3-brand" id="logo-btn">
+        <div class="m3-brand-icon">
+          <span class="material-symbols-outlined">qr_code_2</span>
+        </div>
+        <div class="m3-brand-title">
+          <span class="title-main">QR<span class="title-accent">Beam</span></span>
+          <span class="m3-chip-expressive">M3 EXPRESSIVE</span>
+        </div>
+      </div>
+
+      <!-- M3 Expressive Navigation Segmented Pills -->
+      <nav class="m3-nav-pills">
+        <button class="m3-pill-tab active" id="tab-home" data-target="home-view">
+          <span class="material-symbols-outlined icon-inactive">home</span>
+          <span class="material-symbols-outlined icon-active">home</span>
+          <span class="tab-label">Home</span>
+        </button>
+
+        <button class="m3-pill-tab" id="tab-send" data-target="send-view">
+          <span class="material-symbols-outlined icon-inactive">send</span>
+          <span class="material-symbols-outlined icon-active">send</span>
+          <span class="tab-label">Send</span>
+        </button>
+
+        <button class="m3-pill-tab" id="tab-receive" data-target="receive-view">
+          <span class="material-symbols-outlined icon-inactive">photo_camera</span>
+          <span class="material-symbols-outlined icon-active">photo_camera</span>
+          <span class="tab-label">Receive</span>
+        </button>
+      </nav>
+    </header>
+
+    <!-- Main Views Container -->
+    <main class="m3-main-container">
+      
+      <!-- ================= HOME VIEW ================= -->
+      <section id="home-view" class="m3-view active">
+        <div class="m3-hero-expressive">
+          <div class="m3-badge-pill">
+            <span class="m3-dot-pulse"></span>
+            <span>Air-Gapped Optical Streaming</span>
+          </div>
+
+          <h1 class="m3-display-large">
+            Transfer Data Over Video <br>
+            <span class="m3-gradient-text">Instant. Offline. Universal.</span>
+          </h1>
+
+          <p class="m3-body-large">
+            QRBeam slices files and URLs into an expressive sequence of high-frequency QR codes. Simply point any camera at the screen to stream data at up to 30 frames per second.
+          </p>
+
+          <!-- Expressive Action Cards -->
+          <div class="m3-hero-grid">
+            <!-- Send Card -->
+            <div class="m3-card m3-card-elevated m3-hero-card" id="btn-goto-send">
+              <div class="card-state-layer"></div>
+              <div class="m3-icon-container primary">
+                <span class="material-symbols-outlined">upload_file</span>
+              </div>
+              <div class="m3-card-body">
+                <h3 class="m3-title-large">Send File or Link</h3>
+                <p class="m3-body-medium">Encode any file or URL into a repeating QR code sequence for high-speed transmission.</p>
+              </div>
+              <div class="m3-card-action">
+                <button class="m3-button m3-button-filled">
+                  <span>Start Sending</span>
+                  <span class="material-symbols-outlined">arrow_forward</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Receive Card -->
+            <div class="m3-card m3-card-elevated m3-hero-card" id="btn-goto-receive">
+              <div class="card-state-layer"></div>
+              <div class="m3-icon-container secondary">
+                <span class="material-symbols-outlined">qr_code_scanner</span>
+              </div>
+              <div class="m3-card-body">
+                <h3 class="m3-title-large">Receive via Camera</h3>
+                <p class="m3-body-medium">Use your camera to capture the live QR stream and automatically reassemble your data.</p>
+              </div>
+              <div class="m3-card-action">
+                <button class="m3-button m3-button-tonal">
+                  <span>Start Scanning</span>
+                  <span class="material-symbols-outlined">arrow_forward</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Feature Highlights -->
+          <div class="m3-features-row">
+            <div class="m3-feature-chip">
+              <span class="material-symbols-outlined">lock</span>
+              <div>
+                <strong>100% Offline</strong>
+                <p>No Wi-Fi, Bluetooth, or cloud servers required.</p>
+              </div>
+            </div>
+            <div class="m3-feature-chip">
+              <span class="material-symbols-outlined">bolt</span>
+              <div>
+                <strong>High Speed</strong>
+                <p>Custom burst protocol transferring up to 30 FPS.</p>
+              </div>
+            </div>
+            <div class="m3-feature-chip">
+              <span class="material-symbols-outlined">devices</span>
+              <div>
+                <strong>Universal Support</strong>
+                <p>Runs in any browser on PC, Mac, Android, or iOS.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SENDER VIEW ================= -->
+      <section id="send-view" class="m3-view">
+        <div class="m3-grid-layout">
+          
+          <!-- Setup Column -->
+          <div class="m3-grid-col">
+            <div class="m3-card m3-card-outlined">
+              <div class="m3-card-header">
+                <h2 class="m3-title-medium">Select Payload</h2>
+                
+                <!-- M3 Segmented Button -->
+                <div class="m3-segmented-button">
+                  <button class="m3-segment-item active" id="input-mode-file">
+                    <span class="material-symbols-outlined">description</span>
+                    <span>File</span>
+                  </button>
+                  <button class="m3-segment-item" id="input-mode-link">
+                    <span class="material-symbols-outlined">link</span>
+                    <span>Link / Text</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- File Upload Section -->
+              <div id="file-input-section" class="m3-input-pane active">
+                <div class="m3-drop-zone" id="drop-zone">
+                  <input type="file" id="file-picker" style="display:none;">
+                  
+                  <div class="m3-drop-content" id="drop-zone-prompt">
+                    <div class="m3-drop-icon">
+                      <span class="material-symbols-outlined">cloud_upload</span>
+                    </div>
+                    <h4 class="m3-title-medium">Drag & Drop file here</h4>
+                    <p class="m3-body-small">or tap to browse files</p>
+                    <span class="m3-label-small">Recommended size under 1.5 MB</span>
+                  </div>
+
+                  <!-- File Selected Banner -->
+                  <div class="m3-file-preview-banner" id="file-info-preview" style="display:none;">
+                    <div class="m3-file-badge-chip" id="file-badge">FILE</div>
+                    <div class="m3-file-meta">
+                      <span class="m3-filename" id="preview-filename">filename.ext</span>
+                      <span class="m3-filesize" id="preview-filesize">0 KB</span>
+                    </div>
+                    <button class="m3-icon-button danger" id="btn-remove-file" title="Remove file">
+                      <span class="material-symbols-outlined">close</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Link / Text Input Section -->
+              <div id="link-input-section" class="m3-input-pane">
+                <div class="m3-field-group">
+                  <label for="link-textarea" class="m3-label-large">URL or Plain Text Payload</label>
+                  <textarea id="link-textarea" class="m3-textarea" placeholder="Paste https://example.com or type text payload..." rows="4"></textarea>
+                </div>
+              </div>
+
+              <!-- Expressive Slider Configurations -->
+              <div class="m3-config-box">
+                <div class="m3-config-heading">Transmission Controls</div>
+
+                <!-- Speed Slider -->
+                <div class="m3-slider-group">
+                  <div class="m3-slider-label-row">
+                    <span class="m3-label-large">Frame Rate (Speed)</span>
+                    <span class="m3-badge-value" id="val-fps">12 FPS</span>
+                  </div>
+                  <input type="range" id="slider-fps" min="2" max="25" value="12" step="1" class="m3-slider">
+                  <div class="m3-slider-ticks">
+                    <span>2 FPS (Slow)</span>
+                    <span>12 FPS (Default)</span>
+                    <span>25 FPS (Max)</span>
+                  </div>
+                </div>
+
+                <!-- Chunk Size Slider -->
+                <div class="m3-slider-group">
+                  <div class="m3-slider-label-row">
+                    <span class="m3-label-large">Chunk Size</span>
+                    <span class="m3-badge-value" id="val-chunk-size">384 Bytes</span>
+                  </div>
+                  <input type="range" id="slider-chunk-size" min="128" max="768" value="384" step="64" class="m3-slider">
+                  <div class="m3-slider-ticks">
+                    <span>128B (High Readability)</span>
+                    <span>384B</span>
+                    <span>768B (Dense)</span>
+                  </div>
+                </div>
+              </div>
+
+              <button class="m3-button m3-button-filled m3-full-width" id="btn-start-beam" disabled>
+                <span class="material-symbols-outlined">play_arrow</span>
+                <span>Start Transmission</span>
+              </button>
+
+            </div>
+          </div>
+
+          <!-- Display Stage Column -->
+          <div class="m3-grid-col">
+            <div class="m3-card m3-card-outlined m3-stage-card">
+              
+              <div class="m3-stage-header">
+                <div class="m3-status-chip" id="sender-status">
+                  <span class="m3-status-dot"></span>
+                  <span class="status-text">Ready</span>
+                </div>
+                <div class="m3-counter-pill" id="sender-chunk-badge">Chunk --/--</div>
+              </div>
+
+              <!-- Expressive QR Stage -->
+              <div class="m3-qr-frame">
+                <canvas id="qr-canvas" width="400" height="400"></canvas>
+                <div class="m3-qr-placeholder" id="qr-placeholder">
+                  <span class="material-symbols-outlined placeholder-icon">qr_code_2</span>
+                  <p class="m3-body-medium">Select a payload to begin optical transmission</p>
+                </div>
+              </div>
+
+              <!-- M3 Expressive Linear Progress Indicator -->
+              <div class="m3-progress-wrapper">
+                <div class="m3-linear-progress">
+                  <div class="m3-progress-indicator" id="sender-progress-fill" style="width: 0%;"></div>
+                </div>
+                <div class="m3-progress-meta">
+                  <span id="sender-progress-text" class="m3-label-medium">0% Complete</span>
+                  <span id="sender-time-est" class="m3-label-medium">Est: --</span>
+                </div>
+              </div>
+
+              <!-- M3 Transport Control Bar -->
+              <div class="m3-transport-bar">
+                <button class="m3-icon-button" id="btn-prev-chunk" title="Previous Chunk" disabled>
+                  <span class="material-symbols-outlined">skip_previous</span>
+                </button>
+                
+                <button class="m3-fab m3-fab-primary" id="btn-toggle-play" disabled>
+                  <span class="material-symbols-outlined" id="play-icon">play_arrow</span>
+                  <span class="material-symbols-outlined" id="pause-icon" style="display:none;">pause</span>
+                </button>
+
+                <button class="m3-icon-button" id="btn-next-chunk" title="Next Chunk" disabled>
+                  <span class="material-symbols-outlined">skip_next</span>
+                </button>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ================= RECEIVER VIEW ================= -->
+      <section id="receive-view" class="m3-view">
+        <div class="m3-grid-layout">
+          
+          <!-- Camera Viewfinder Column -->
+          <div class="m3-grid-col">
+            <div class="m3-card m3-card-outlined m3-scanner-card">
+              
+              <div class="m3-stage-header">
+                <div class="m3-status-chip" id="receiver-status">
+                  <span class="m3-status-dot"></span>
+                  <span class="status-text">Camera Standby</span>
+                </div>
+
+                <div class="m3-select-wrapper">
+                  <span class="material-symbols-outlined select-icon">videocam</span>
+                  <select id="camera-select" class="m3-select">
+                    <option value="">Detecting Cameras...</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Expressive Camera Viewfinder -->
+              <div class="m3-viewfinder-container">
+                <video id="scanner-video" autoplay playsinline muted></video>
+                <canvas id="scanner-canvas" style="display:none;"></canvas>
+
+                <!-- Scanning Reticle FX -->
+                <div class="m3-reticle-overlay" id="viewfinder-overlay">
+                  <div class="m3-reticle-box">
+                    <div class="reticle-corner corner-tl"></div>
+                    <div class="reticle-corner corner-tr"></div>
+                    <div class="reticle-corner corner-bl"></div>
+                    <div class="reticle-corner corner-br"></div>
+                    <div class="m3-laser-bar"></div>
+                  </div>
+                  <div class="m3-scan-hint" id="scan-prompt">Align QR code inside viewfinder</div>
+                </div>
+
+                <!-- Camera Permission / Off Overlay -->
+                <div class="m3-camera-off-overlay" id="camera-placeholder">
+                  <div class="m3-camera-icon-bg">
+                    <span class="material-symbols-outlined">photo_camera</span>
+                  </div>
+                  <h3 class="m3-title-large">Camera Permission Required</h3>
+                  <p class="m3-body-medium">Allow camera access to scan optical QRBeam streams.</p>
+                  <button class="m3-button m3-button-filled" id="btn-start-camera">
+                    <span class="material-symbols-outlined">videocam</span>
+                    <span>Enable Camera</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="m3-scanner-actions">
+                <button class="m3-button m3-button-tonal m3-full-width" id="btn-stop-camera" style="display: none;">
+                  <span class="material-symbols-outlined">videocam_off</span>
+                  <span>Stop Camera</span>
+                </button>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Defragmentation Matrix & Assembly Column -->
+          <div class="m3-grid-col">
+            <div class="m3-card m3-card-outlined m3-assembly-card">
+              
+              <div class="m3-card-header">
+                <h2 class="m3-title-medium">Reception Matrix</h2>
+                <button class="m3-button m3-button-text danger" id="btn-reset-session" style="display:none;">Reset</button>
+              </div>
+
+              <!-- Session Details Banner -->
+              <div class="m3-session-banner" id="session-info-strip">
+                <div class="session-detail">
+                  <span class="detail-label">Payload</span>
+                  <span class="detail-value" id="rec-filename">Waiting for stream...</span>
+                </div>
+                <div class="session-detail align-right">
+                  <span class="detail-label">Size</span>
+                  <span class="detail-value" id="rec-filesize">-- KB</span>
+                </div>
+              </div>
+
+              <!-- Metric Cards -->
+              <div class="m3-metrics-row">
+                <div class="m3-metric-card">
+                  <span class="metric-value" id="rec-chunks-count">0 / 0</span>
+                  <span class="metric-label">Chunks</span>
+                </div>
+                <div class="m3-metric-card">
+                  <span class="metric-value" id="rec-percent">0%</span>
+                  <span class="metric-label">Progress</span>
+                </div>
+                <div class="m3-metric-card">
+                  <span class="metric-value" id="rec-speed">0 fps</span>
+                  <span class="metric-label">Scan Rate</span>
+                </div>
+              </div>
+
+              <!-- M3 Expressive Block Matrix -->
+              <div class="m3-matrix-container">
+                <div class="matrix-header">
+                  <span>Data Block Matrix</span>
+                  <span id="defrag-status-badge" class="m3-matrix-badge">Standby</span>
+                </div>
+                <div class="m3-block-grid" id="defrag-grid">
+                  <div class="m3-grid-placeholder">Scan a QRBeam stream to generate chunk grid</div>
+                </div>
+              </div>
+
+              <!-- Transfer Completion Dialog Card -->
+              <div class="m3-completion-card" id="complete-box" style="display: none;">
+                <div class="completion-hero-icon">
+                  <span class="material-symbols-outlined">check_circle</span>
+                </div>
+                <h3 class="m3-title-large">Transfer Complete!</h3>
+                <p id="complete-summary" class="m3-body-medium">All data blocks successfully received and verified.</p>
+                
+                <div class="m3-completion-actions" id="file-download-actions" style="display: none;">
+                  <button class="m3-button m3-button-filled m3-full-width" id="btn-download-file">
+                    <span class="material-symbols-outlined">download</span>
+                    <span>Download File</span>
+                  </button>
+                </div>
+
+                <div class="m3-completion-actions" id="link-open-actions" style="display: none;">
+                  <a href="#" target="_blank" rel="noopener noreferrer" class="m3-button m3-button-filled m3-full-width" id="btn-open-link">
+                    <span class="material-symbols-outlined">open_in_new</span>
+                    <span>Open Link</span>
+                  </a>
+                  <button class="m3-button m3-button-tonal m3-full-width" id="btn-copy-link">
+                    <span class="material-symbols-outlined">content_copy</span>
+                    <span>Copy to Clipboard</span>
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Application Engine Script -->
+  <script src="app.js"></script>
+</body>
+</html>
