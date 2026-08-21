@@ -196,6 +196,17 @@ html, body {
   color: var(--md-sys-color-on-tertiary-container);
 }
 
+.m3-chip-version {
+  font-family: var(--md-font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--md-shape-full);
+  background: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-primary);
+  border: 1px solid var(--md-sys-color-outline-variant);
+}
+
 /* Navigation Pills */
 .m3-nav-pills {
   display: flex;
