@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>QRBeam - Material 3 Mobile-Optimized Data Transfer</title>
-  <meta name="description" content="Transfer files and links between any device using high-speed repeating QR codes and camera scanning. Material 3 Expressive Mobile Edition.">
+  <title>QRBeam - Material 3 Smart Compressed Optical Data Transfer</title>
+  <meta name="description" content="Transfer files and links between any device using high-speed repeating QR codes and camera scanning with native GZIP compression.">
   
   <!-- Google Fonts: Plus Jakarta Sans & Material Symbols -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -38,7 +38,7 @@
         </div>
         <div class="m3-brand-title">
           <span class="title-main">QR<span class="title-accent">Beam</span></span>
-          <span class="m3-chip-expressive">M3 MOBILE</span>
+          <span class="m3-chip-expressive">SMART COMPRESS</span>
         </div>
       </div>
 
@@ -72,16 +72,16 @@
         <div class="m3-hero-expressive">
           <div class="m3-badge-pill">
             <span class="m3-dot-pulse"></span>
-            <span>Air-Gapped Optical Streaming</span>
+            <span>Smart Compressed Optical Streaming</span>
           </div>
 
           <h1 class="m3-display-large">
             Transfer Data Over Video <br>
-            <span class="m3-gradient-text">Instant. Offline. Universal.</span>
+            <span class="m3-gradient-text">Compressed. Offline. Universal.</span>
           </h1>
 
           <p class="m3-body-large">
-            QRBeam slices files and URLs into an expressive sequence of high-frequency QR codes. Simply point any camera at the screen to stream data at up to 30 frames per second.
+            QRBeam compresses payload data with native GZIP engine before slicing into high-frequency QR codes, reducing transfer time by up to 75%.
           </p>
 
           <!-- Expressive Action Cards -->
@@ -94,7 +94,7 @@
               </div>
               <div class="m3-card-body">
                 <h3 class="m3-title-large">Send File or Link</h3>
-                <p class="m3-body-medium">Encode any file or URL into a repeating QR code sequence for high-speed transmission.</p>
+                <p class="m3-body-medium">Compress and encode any file or URL into a repeating QR code stream.</p>
               </div>
               <div class="m3-card-action">
                 <button class="m3-button m3-button-filled">
@@ -112,7 +112,7 @@
               </div>
               <div class="m3-card-body">
                 <h3 class="m3-title-large">Receive via Camera</h3>
-                <p class="m3-body-medium">Use your camera to capture the live QR stream and automatically reassemble your data.</p>
+                <p class="m3-body-medium">Scan the live stream to reassemble and automatically decompress your data.</p>
               </div>
               <div class="m3-card-action">
                 <button class="m3-button m3-button-tonal">
@@ -126,24 +126,24 @@
           <!-- Feature Highlights -->
           <div class="m3-features-row">
             <div class="m3-feature-chip">
-              <span class="material-symbols-outlined">lock</span>
+              <span class="material-symbols-outlined">folder_zip</span>
               <div>
-                <strong>100% Offline</strong>
-                <p>No Wi-Fi, Bluetooth, or cloud servers required.</p>
+                <strong>Smart Compression</strong>
+                <p>Native GZIP shrinks payloads by up to 75% for ultra-fast transfers.</p>
               </div>
             </div>
             <div class="m3-feature-chip">
               <span class="material-symbols-outlined">bolt</span>
               <div>
-                <strong>High Speed Engine</strong>
-                <p>Off-thread worker decoding up to 30+ FPS.</p>
+                <strong>Off-Thread Scanning</strong>
+                <p>Web Worker camera decoding at 30+ FPS.</p>
               </div>
             </div>
             <div class="m3-feature-chip">
               <span class="material-symbols-outlined">phone_iphone</span>
               <div>
                 <strong>Mobile Optimized</strong>
-                <p>Tailored layouts and low-density QR options for phones.</p>
+                <p>Tailored mobile views and low-density QR modes.</p>
               </div>
             </div>
           </div>
@@ -183,8 +183,8 @@
                       <span class="material-symbols-outlined">cloud_upload</span>
                     </div>
                     <h4 class="m3-title-medium">Tap or Drag File Here</h4>
-                    <p class="m3-body-small">Select any file to encode</p>
-                    <span class="m3-label-small">Works best under 5 MB for optical transfer</span>
+                    <p class="m3-body-small">Select any file to encode & compress</p>
+                    <span class="m3-label-small">Smart GZIP compression enabled</span>
                   </div>
 
                   <!-- File Selected Banner -->
@@ -207,6 +207,12 @@
                   <label for="link-textarea" class="m3-label-large">URL or Plain Text Payload</label>
                   <textarea id="link-textarea" class="m3-textarea" placeholder="Paste https://example.com or type text payload..." rows="4"></textarea>
                 </div>
+              </div>
+
+              <!-- Compression Savings Chip -->
+              <div class="m3-compression-chip" id="compression-badge" style="display:none;">
+                <span class="material-symbols-outlined">folder_zip</span>
+                <span id="compression-text">GZIP Compressed: 1.2 MB → 350 KB (-71%)</span>
               </div>
 
               <!-- Speed & Density Presets for Mobile -->
@@ -435,7 +441,7 @@
                   <span class="material-symbols-outlined">check_circle</span>
                 </div>
                 <h3 class="m3-title-large">Transfer Complete!</h3>
-                <p id="complete-summary" class="m3-body-medium">All data blocks successfully received and verified.</p>
+                <p id="complete-summary" class="m3-body-medium">All data blocks successfully received, decompressed, and verified.</p>
                 
                 <div class="m3-completion-actions" id="file-download-actions" style="display: none;">
                   <button class="m3-button m3-button-filled m3-full-width" id="btn-download-file">
@@ -464,7 +470,7 @@
 
     </main>
 
-    <!-- Material 3 Mobile Bottom Navigation Bar (Shown on Mobile Devices) -->
+    <!-- Material 3 Mobile Bottom Navigation Bar -->
     <nav class="m3-bottom-nav mobile-only">
       <button class="m3-bottom-nav-item active" data-target="home-view">
         <div class="nav-icon-pill">

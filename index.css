@@ -408,6 +408,26 @@ html, body {
   line-height: 1.3;
 }
 
+/* Compression Badge Chip */
+.m3-compression-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: var(--md-sys-color-success-container);
+  color: var(--md-sys-color-on-success);
+  border: 1px solid var(--md-sys-color-success);
+  padding: 0.65rem 1rem;
+  border-radius: var(--md-shape-lg);
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 1.25rem;
+  animation: m3SlideUp 0.3s ease-out;
+}
+
+.m3-compression-chip .material-symbols-outlined {
+  font-size: 1.3rem;
+}
+
 /* Grid Layout */
 .m3-grid-layout {
   display: grid;
@@ -1147,7 +1167,6 @@ html, body {
     grid-template-columns: 1fr;
   }
 
-  /* M3 Mobile Bottom Nav Bar */
   .m3-bottom-nav {
     position: fixed;
     bottom: 0;
