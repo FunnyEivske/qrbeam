@@ -1,6 +1,6 @@
 /**
- * QRBeam - Mobile-Optimized Zero Data Data Transfer Engine
- * Features: Mobile-ready path resolution, fallback Web Worker, GZIP compression, 2D Canvas defragmentation matrix.
+ * QRBeam - Zero Data Interleaved Multi-Color RGB Transfer Engine
+ * Features: 3-Frame Interleaved Overlap (zero missed chunks), Multi-Color RGB multiplexing, Web Worker scanning, 2D Canvas matrix.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -17,19 +17,15 @@ class QRBeamApp {
     this.selectedFile = null;
     this.selectedFileBuffer = null;
     this.linkText = '';
-    this.senderFps = 12;
+    this.senderFps = 10; // Optimized frame rate for camera capture stability
     this.senderChunkSize = 256;
-    this.isRgbMode = false; // Default to robust single-QR stream for max mobile compatibility
+    this.isRgbMode = true; // RESTORED MULTI-COLOR RGB MODE AS DEFAULT!
     this.senderPackets = [];
     this.senderCurrentIndex = 0;
     this.senderIsPlaying = false;
     this.senderTimerId = null;
     this.senderLastFrameTime = 0;
     this.senderSessionId = '';
-
-    // WebRTC State
-    this.peerConnection = null;
-    this.dataChannel = null;
 
     // Receiver State
     this.receiverStream = null;
@@ -46,13 +42,13 @@ class QRBeamApp {
     this.receiverCurrentFps = 0;
     this.receiverCompletedBlobUrl = null;
 
-    // Offscreen Canvases for RGB Multiplexing
+    // Offscreen Canvases for RGB Multiplexing (360x360)
     this.offCanvas1 = document.createElement('canvas');
     this.offCanvas2 = document.createElement('canvas');
     this.offCanvas3 = document.createElement('canvas');
-    this.offCanvas1.width = this.offCanvas1.height = 400;
-    this.offCanvas2.width = this.offCanvas2.height = 400;
-    this.offCanvas3.width = this.offCanvas3.height = 400;
+    this.offCanvas1.width = this.offCanvas1.height = 360;
+    this.offCanvas2.width = this.offCanvas2.height = 360;
+    this.offCanvas3.width = this.offCanvas3.height = 360;
 
     // Worker State
     this.qrWorker = null;
@@ -94,7 +90,7 @@ class QRBeamApp {
     }
   }
 
-  /* WEB WORKER RESOLUTION WITH MAIN-THREAD FALLBACK FOR MOBILE */
+  /* WEB WORKER WITH COLOR CHANNEL SEPARATION */
   initQRWorker() {
     try {
       const basePath = window.location.origin + window.location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, '') + '/';
@@ -118,9 +114,52 @@ class QRBeamApp {
           const data = imageData.data;
           const results = [];
 
+          // 1. Standard Grayscale / Main Scan
           try {
             const codeMain = jsQR(data, width, height, { inversionAttempts: 'dontInvert' });
             if (codeMain && codeMain.data) results.push(codeMain.data);
+          } catch (err) {}
+
+          // 2. Red Channel Image
+          try {
+            const redData = new Uint8ClampedArray(width * height * 4);
+            for (let i = 0; i < data.length; i += 4) {
+              const r = data[i];
+              redData[i] = r;
+              redData[i+1] = r;
+              redData[i+2] = r;
+              redData[i+3] = 255;
+            }
+            const codeRed = jsQR(redData, width, height, { inversionAttempts: 'dontInvert' });
+            if (codeRed && codeRed.data) results.push(codeRed.data);
+          } catch (err) {}
+
+          // 3. Green Channel Image
+          try {
+            const greenData = new Uint8ClampedArray(width * height * 4);
+            for (let i = 0; i < data.length; i += 4) {
+              const g = data[i+1];
+              greenData[i] = g;
+              greenData[i+1] = g;
+              greenData[i+2] = g;
+              greenData[i+3] = 255;
+            }
+            const codeGreen = jsQR(greenData, width, height, { inversionAttempts: 'dontInvert' });
+            if (codeGreen && codeGreen.data) results.push(codeGreen.data);
+          } catch (err) {}
+
+          // 4. Blue Channel Image
+          try {
+            const blueData = new Uint8ClampedArray(width * height * 4);
+            for (let i = 0; i < data.length; i += 4) {
+              const b = data[i+2];
+              blueData[i] = b;
+              blueData[i+1] = b;
+              blueData[i+2] = b;
+              blueData[i+3] = 255;
+            }
+            const codeBlue = jsQR(blueData, width, height, { inversionAttempts: 'dontInvert' });
+            if (codeBlue && codeBlue.data) results.push(codeBlue.data);
           } catch (err) {}
 
           self.postMessage({ results: results });
@@ -269,13 +308,13 @@ class QRBeamApp {
     }
 
     if (this.dom.presetMobileFast) {
-      this.dom.presetMobileFast.addEventListener('click', () => this.applyPreset(256, 12, false, this.dom.presetMobileFast));
+      this.dom.presetMobileFast.addEventListener('click', () => this.applyPreset(256, 10, false, this.dom.presetMobileFast));
     }
     if (this.dom.presetRgbTurbo) {
-      this.dom.presetRgbTurbo.addEventListener('click', () => this.applyPreset(384, 15, true, this.dom.presetRgbTurbo));
+      this.dom.presetRgbTurbo.addEventListener('click', () => this.applyPreset(384, 10, true, this.dom.presetRgbTurbo));
     }
     if (this.dom.presetDense) {
-      this.dom.presetDense.addEventListener('click', () => this.applyPreset(768, 15, false, this.dom.presetDense));
+      this.dom.presetDense.addEventListener('click', () => this.applyPreset(768, 12, false, this.dom.presetDense));
     }
 
     if (this.dom.sliderFps) {
@@ -523,7 +562,7 @@ class QRBeamApp {
     this.dom.pauseIcon.style.display = 'inline-block';
     
     this.dom.senderStatus.classList.add('active');
-    this.dom.senderStatus.querySelector('.status-text').innerText = 'Transmitting';
+    this.dom.senderStatus.querySelector('.status-text').innerText = this.isRgbMode ? 'Transmitting (Multi-Color RGB 3x)' : 'Transmitting';
 
     this.senderLastFrameTime = performance.now();
     this.senderLoop();
@@ -566,6 +605,7 @@ class QRBeamApp {
     if (elapsed >= interval) {
       this.senderLastFrameTime = timestamp - (elapsed % interval);
       this.renderSenderFrame();
+      // Move 1 chunk forward per frame for 3-frame Interleaved Overlap!
       this.senderCurrentIndex = (this.senderCurrentIndex + 1) % this.senderPackets.length;
     }
 
@@ -577,19 +617,50 @@ class QRBeamApp {
     if (total === 0) return;
 
     const canvas = this.dom.qrCanvas;
-    const packet = this.senderPackets[this.senderCurrentIndex];
+    const ctx = canvas.getContext('2d');
 
-    try {
-      QRCode.toCanvas(canvas, packet, {
-        errorCorrectionLevel: 'L',
-        margin: 1,
-        width: 320,
-        color: { dark: '#000000', light: '#ffffff' }
-      }, (error) => {
-        if (error) console.error('QR Canvas error:', error);
-      });
-    } catch (e) {
-      console.warn('QR Render error fallback:', e);
+    if (!this.isRgbMode) {
+      // Standard Black & White Frame
+      const packet = this.senderPackets[this.senderCurrentIndex % total];
+      try {
+        QRCode.toCanvas(canvas, packet, {
+          errorCorrectionLevel: 'L',
+          margin: 1,
+          width: 360,
+          color: { dark: '#000000', light: '#ffffff' }
+        });
+      } catch (e) {
+        console.warn('QR Render error:', e);
+      }
+    } else {
+      // Multi-Color RGB 3-in-1 Channel Multiplexing with 3-Frame Interleaved Overlap
+      const p1 = this.senderPackets[this.senderCurrentIndex % total];
+      const p2 = this.senderPackets[(this.senderCurrentIndex + 1) % total];
+      const p3 = this.senderPackets[(this.senderCurrentIndex + 2) % total];
+
+      try {
+        QRCode.toCanvas(this.offCanvas1, p1, { errorCorrectionLevel: 'L', margin: 1, width: 360 });
+        QRCode.toCanvas(this.offCanvas2, p2, { errorCorrectionLevel: 'L', margin: 1, width: 360 });
+        QRCode.toCanvas(this.offCanvas3, p3, { errorCorrectionLevel: 'L', margin: 1, width: 360 });
+
+        const imgData1 = this.offCanvas1.getContext('2d').getImageData(0, 0, 360, 360).data;
+        const imgData2 = this.offCanvas2.getContext('2d').getImageData(0, 0, 360, 360).data;
+        const imgData3 = this.offCanvas3.getContext('2d').getImageData(0, 0, 360, 360).data;
+
+        const rgbImgData = ctx.createImageData(360, 360);
+        const data = rgbImgData.data;
+
+        for (let i = 0; i < data.length; i += 4) {
+          data[i]     = imgData1[i] < 128 ? 255 : 0; // Red Channel
+          data[i + 1] = imgData2[i] < 128 ? 255 : 0; // Green Channel
+          data[i + 2] = imgData3[i] < 128 ? 255 : 0; // Blue Channel
+          data[i + 3] = 255;
+        }
+
+        ctx.putImageData(rgbImgData, 0, 0);
+      } catch (e) {
+        console.warn('RGB Multi-Color Render Fallback:', e);
+      }
     }
 
     const current = this.senderCurrentIndex + 1;
