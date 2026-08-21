@@ -1,6 +1,6 @@
 /**
- * QRBeam - High-Speed Mobile Data Transfer Engine
- * Features: Zero-Overhead Raw Binary Byte Mode (33% faster than Base64), High-Contrast B&W for 100% Phone Camera Reliability, Native GZIP Compression, Web Worker scanning, 2D Canvas matrix.
+ * QRBeam v3.0.0 - Wi-Fi P2P & Optical Data Transfer Engine
+ * Features: Instant Wi-Fi PeerConnection via 4-digit code or 1-scan QR, with simple B&W optical QR fallback.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -17,14 +17,19 @@ class QRBeamApp {
     this.selectedFile = null;
     this.selectedFileBuffer = null;
     this.linkText = '';
-    this.senderFps = 12;
-    this.senderChunkSize = 320; // Expanded binary capacity (Zero Base64 Overhead)
+    this.senderFps = 10;
+    this.senderChunkSize = 256;
     this.senderPackets = [];
     this.senderCurrentIndex = 0;
     this.senderIsPlaying = false;
     this.senderTimerId = null;
     this.senderLastFrameTime = 0;
-    this.senderSessionId = '';
+    this.pairCode = '';
+
+    // PeerJS P2P State
+    this.peer = null;
+    this.activeConnection = null;
+    this.p2pConnected = false;
 
     // Receiver State
     this.receiverStream = null;
@@ -64,7 +69,6 @@ class QRBeamApp {
       const compressedBytes = new Uint8Array(compressedBuffer);
       return compressedBytes.byteLength < uint8Array.byteLength ? compressedBytes : uint8Array;
     } catch (e) {
-      console.warn('Compression skipped:', e);
       return uint8Array;
     }
   }
@@ -76,7 +80,6 @@ class QRBeamApp {
       const decompressedBuffer = await new Response(stream).arrayBuffer();
       return new Uint8Array(decompressedBuffer);
     } catch (e) {
-      console.warn('Decompression skipped:', e);
       return uint8Array;
     }
   }
@@ -99,23 +102,16 @@ class QRBeamApp {
         self.onmessage = function(e) {
           const { imageData, width, height } = e.data;
           if (typeof jsQR === 'undefined') {
-            self.postMessage({ result: null });
+            self.postMessage({ resultText: null });
             return;
           }
-          const data = imageData.data;
 
           try {
-            const code = jsQR(data, width, height, { inversionAttempts: 'dontInvert' });
-            if (code) {
-              self.postMessage({
-                resultText: code.data,
-                binaryData: code.binaryData ? Array.from(code.binaryData) : null
-              });
-              return;
-            }
-          } catch (err) {}
-
-          self.postMessage({ resultText: null, binaryData: null });
+            const code = jsQR(imageData.data, width, height, { inversionAttempts: 'dontInvert' });
+            self.postMessage({ resultText: code ? code.data : null });
+          } catch (err) {
+            self.postMessage({ resultText: null });
+          }
         };
       `;
 
@@ -125,18 +121,16 @@ class QRBeamApp {
 
       this.qrWorker.onmessage = (e) => {
         this.workerBusy = false;
-        if (e.data && (e.data.resultText || e.data.binaryData)) {
-          this.processScannedResult(e.data.resultText, e.data.binaryData);
+        if (e.data && e.data.resultText) {
+          this.processScannedPacket(e.data.resultText);
         }
       };
 
-      this.qrWorker.onerror = (err) => {
-        console.warn('Worker error, using main thread scanner:', err);
+      this.qrWorker.onerror = () => {
         this.workerBusy = false;
         this.qrWorker = null;
       };
     } catch (e) {
-      console.warn('Worker initialization skipped:', e);
       this.qrWorker = null;
     }
   }
@@ -165,14 +159,9 @@ class QRBeamApp {
     this.dom.compressionBadge = document.getElementById('compression-badge');
     this.dom.compressionText = document.getElementById('compression-text');
 
-    this.dom.presetMobileFast = document.getElementById('preset-mobile-fast');
-    this.dom.presetBalanced = document.getElementById('preset-balanced');
-    this.dom.presetDense = document.getElementById('preset-dense');
-
-    this.dom.sliderFps = document.getElementById('slider-fps');
-    this.dom.valFps = document.getElementById('val-fps');
-    this.dom.sliderChunkSize = document.getElementById('slider-chunk-size');
-    this.dom.valChunkSize = document.getElementById('val-chunk-size');
+    this.dom.pairCodeVal = document.getElementById('pair-code-val');
+    this.dom.modeWifiDirect = document.getElementById('mode-wifi-direct');
+    this.dom.modeOpticalStream = document.getElementById('mode-optical-stream');
     this.dom.btnStartBeam = document.getElementById('btn-start-beam');
 
     this.dom.senderStatus = document.getElementById('sender-status');
@@ -187,6 +176,9 @@ class QRBeamApp {
     this.dom.pauseIcon = document.getElementById('pause-icon');
     this.dom.btnPrevChunk = document.getElementById('btn-prev-chunk');
     this.dom.btnNextChunk = document.getElementById('btn-next-chunk');
+
+    this.dom.inputPairCode = document.getElementById('input-pair-code');
+    this.dom.btnConnectCode = document.getElementById('btn-connect-code');
 
     this.dom.cameraSelect = document.getElementById('camera-select');
     this.dom.scannerVideo = document.getElementById('scanner-video');
@@ -260,37 +252,17 @@ class QRBeamApp {
       });
     }
 
-    if (this.dom.presetMobileFast) {
-      this.dom.presetMobileFast.addEventListener('click', () => this.applyPreset(256, 12, this.dom.presetMobileFast));
-    }
-    if (this.dom.presetBalanced) {
-      this.dom.presetBalanced.addEventListener('click', () => this.applyPreset(384, 12, this.dom.presetBalanced));
-    }
-    if (this.dom.presetDense) {
-      this.dom.presetDense.addEventListener('click', () => this.applyPreset(640, 15, this.dom.presetDense));
-    }
-
-    if (this.dom.sliderFps) {
-      this.dom.sliderFps.addEventListener('input', (e) => {
-        this.senderFps = parseInt(e.target.value, 10);
-        this.dom.valFps.innerText = `${this.senderFps} FPS`;
-      });
-    }
-
-    if (this.dom.sliderChunkSize) {
-      this.dom.sliderChunkSize.addEventListener('input', (e) => {
-        this.senderChunkSize = parseInt(e.target.value, 10);
-        this.dom.valChunkSize.innerText = `${this.senderChunkSize} Bytes`;
-        if (this.senderPackets.length > 0) {
-          this.prepareSenderPayload();
-        }
-      });
-    }
-
     if (this.dom.btnStartBeam) this.dom.btnStartBeam.addEventListener('click', () => this.prepareSenderPayload());
     if (this.dom.btnTogglePlay) this.dom.btnTogglePlay.addEventListener('click', () => this.toggleSenderPlay());
     if (this.dom.btnPrevChunk) this.dom.btnPrevChunk.addEventListener('click', () => this.stepSenderChunk(-1));
     if (this.dom.btnNextChunk) this.dom.btnNextChunk.addEventListener('click', () => this.stepSenderChunk(1));
+
+    if (this.dom.btnConnectCode) this.dom.btnConnectCode.addEventListener('click', () => this.connectViaPairCode());
+    if (this.dom.inputPairCode) {
+      this.dom.inputPairCode.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') this.connectViaPairCode();
+      });
+    }
 
     if (this.dom.btnStartCamera) this.dom.btnStartCamera.addEventListener('click', () => this.startCamera());
     if (this.dom.btnStopCamera) this.dom.btnStopCamera.addEventListener('click', () => this.stopCamera());
@@ -299,38 +271,22 @@ class QRBeamApp {
     if (this.dom.btnCopyLink) this.dom.btnCopyLink.addEventListener('click', () => this.copyLinkToClipboard());
   }
 
-  applyPreset(chunkSize, fps, activeBtn) {
-    [this.dom.presetMobileFast, this.dom.presetBalanced, this.dom.presetDense].forEach(btn => {
-      if (btn) btn.classList.remove('active');
-    });
-    if (activeBtn) activeBtn.classList.add('active');
-
-    this.senderChunkSize = chunkSize;
-    this.senderFps = fps;
-
-    if (this.dom.sliderChunkSize) {
-      this.dom.sliderChunkSize.value = chunkSize;
-      this.dom.valChunkSize.innerText = `${chunkSize} Bytes`;
-    }
-
-    if (this.dom.sliderFps) {
-      this.dom.sliderFps.value = fps;
-      this.dom.valFps.innerText = `${fps} FPS`;
-    }
-
-    if (this.senderPackets.length > 0) {
-      this.prepareSenderPayload();
-    }
-  }
-
-  /* ROUTING */
+  /* ROUTING & URL PARAMS */
   handleRouting() {
     const hash = window.location.hash.replace('#/', '');
     let target = 'home-view';
-    if (hash === 'send') target = 'send-view';
-    else if (hash === 'receive') target = 'receive-view';
+    if (hash.startsWith('send')) target = 'send-view';
+    else if (hash.startsWith('receive')) target = 'receive-view';
+
+    const urlParams = new URLSearchParams(window.location.search || hash.split('?')[1] || '');
+    const codeParam = urlParams.get('code');
 
     this.navigateTo(target, false);
+
+    if (target === 'receive-view' && codeParam) {
+      this.dom.inputPairCode.value = codeParam;
+      this.connectViaPairCode();
+    }
   }
 
   navigateTo(viewId, updateHash = true) {
@@ -358,7 +314,9 @@ class QRBeamApp {
       else window.location.hash = '#/';
     }
 
-    if (viewId === 'receive-view' && !this.receiverScanning) {
+    if (viewId === 'send-view' && !this.pairCode) {
+      this.generateSenderPairCode();
+    } else if (viewId === 'receive-view' && !this.receiverScanning) {
       this.populateCameraDevices();
     } else if (viewId !== 'receive-view' && this.receiverScanning) {
       this.stopCamera();
@@ -423,9 +381,44 @@ class QRBeamApp {
     this.dom.btnStartBeam.disabled = !ready;
   }
 
+  /* PEERJS WI-FI P2P PAIRING */
+  generateSenderPairCode() {
+    this.pairCode = Math.floor(1000 + Math.random() * 9000).toString();
+    this.dom.pairCodeVal.innerText = this.pairCode;
+
+    if (typeof Peer !== 'undefined') {
+      try {
+        if (this.peer) this.peer.destroy();
+        this.peer = new Peer('qrb-' + this.pairCode);
+
+        this.peer.on('open', () => {
+          this.dom.senderTimeEst.innerText = 'Wi-Fi P2P Ready (Code: ' + this.pairCode + ')';
+        });
+
+        this.peer.on('connection', (conn) => {
+          this.activeConnection = conn;
+          this.p2pConnected = true;
+          this.dom.senderStatus.classList.add('active');
+          this.dom.senderStatus.querySelector('.status-text').innerText = 'P2P Connected!';
+          this.dom.senderTimeEst.innerText = 'Paired over Wi-Fi!';
+
+          if (navigator.vibrate) navigator.vibrate(100);
+
+          conn.on('open', () => {
+            if (this.senderPayloadP2P) {
+              conn.send(this.senderPayloadP2P);
+            }
+          });
+        });
+      } catch (e) {
+        console.warn('PeerJS init warning:', e);
+      }
+    }
+  }
+
   async prepareSenderPayload() {
     this.stopSender();
-    this.senderSessionId = Math.random().toString(16).substring(2, 6);
+    const sessionId = Math.random().toString(16).substring(2, 6);
 
     let rawBytes = null;
     let meta = {};
@@ -475,36 +468,37 @@ class QRBeamApp {
       this.dom.compressionBadge.style.display = 'none';
     }
 
-    let rawSlices = [];
+    // Save P2P payload
+    this.senderPayloadP2P = { meta, bytes: finalBytes ? Array.from(finalBytes) : null };
+
+    // Send immediately if P2P connection is already open
+    if (this.activeConnection && this.activeConnection.open) {
+      this.activeConnection.send(this.senderPayloadP2P);
+    }
+
+    // Chunk final bytes for optical QR stream backup
+    let rawChunks = [];
     if (finalBytes) {
       const totalBytes = finalBytes.length;
       let offset = 0;
       while (offset < totalBytes) {
         const slice = finalBytes.subarray(offset, offset + this.senderChunkSize);
-        rawSlices.push(slice);
+        rawChunks.push(this.uint8ArrayToBase64(slice));
         offset += this.senderChunkSize;
       }
     }
 
-    const totalChunks = rawSlices.length + 1;
+    const totalChunks = rawChunks.length + 1;
     this.senderPackets = [];
 
-    // Packet 0: Metadata Packet (UTF-8 Header)
-    const metaStr = `QRB1:${this.senderSessionId}:0:${totalChunks}:${JSON.stringify(meta)}`;
-    const enc = new TextEncoder();
-    this.senderPackets.push(enc.encode(metaStr));
+    // Single Pairing QR Code for 1-Scan Wi-Fi Connection
+    const pairingUrl = window.location.origin + window.location.pathname + '#/receive?code=' + this.pairCode;
+    const metaPayload = JSON.stringify(meta);
+    this.senderPackets.push(`QRB1:${sessionId}:0:${totalChunks}:${metaPayload}`);
 
-    // Packets 1..N: Raw Binary Packets (Zero Base64 Expansion!)
-    for (let i = 0; i < rawSlices.length; i++) {
+    for (let i = 0; i < rawChunks.length; i++) {
       const idx = i + 1;
-      const headerStr = `QRB1:${this.senderSessionId}:${idx}:${totalChunks}:`;
-      const headerBytes = enc.encode(headerStr);
-      
-      const packetBytes = new Uint8Array(headerBytes.length + rawSlices[i].length);
-      packetBytes.set(headerBytes, 0);
-      packetBytes.set(rawSlices[i], headerBytes.length);
-
-      this.senderPackets.push(packetBytes);
+      this.senderPackets.push(`QRB1:${sessionId}:${idx}:${totalChunks}:${rawChunks[i]}`);
     }
 
     this.senderCurrentIndex = 0;
@@ -512,6 +506,14 @@ class QRBeamApp {
     this.dom.btnTogglePlay.disabled = false;
     this.dom.btnPrevChunk.disabled = false;
     this.dom.btnNextChunk.disabled = false;
+
+    // Render single pairing QR code first
+    QRCode.toCanvas(this.dom.qrCanvas, pairingUrl, {
+      errorCorrectionLevel: 'L',
+      margin: 1,
+      width: 360,
+      color: { dark: '#000000', light: '#ffffff' }
+    });
 
     this.startSender();
   }
@@ -522,7 +524,7 @@ class QRBeamApp {
     this.dom.pauseIcon.style.display = 'inline-block';
     
     this.dom.senderStatus.classList.add('active');
-    this.dom.senderStatus.querySelector('.status-text').innerText = 'Transmitting (Raw Binary)';
+    this.dom.senderStatus.querySelector('.status-text').innerText = 'Transmitting';
 
     this.senderLastFrameTime = performance.now();
     this.senderLoop();
@@ -576,13 +578,13 @@ class QRBeamApp {
     if (total === 0) return;
 
     const canvas = this.dom.qrCanvas;
-    const packetBytes = this.senderPackets[this.senderCurrentIndex % total];
+    const packet = this.senderPackets[this.senderCurrentIndex % total];
 
     try {
-      QRCode.toCanvas(canvas, [{ data: packetBytes, mode: 'byte' }], {
+      QRCode.toCanvas(canvas, packet, {
         errorCorrectionLevel: 'L',
         margin: 1,
-        width: 340,
+        width: 360,
         color: { dark: '#000000', light: '#ffffff' }
       });
     } catch (e) {
@@ -600,7 +602,49 @@ class QRBeamApp {
     this.dom.senderTimeEst.innerText = `Loop: ${secondsPerLoop}s`;
   }
 
-  /* RECEIVER LOGIC */
+  /* RECEIVER LOGIC & PAIR CODE CONNECT */
+  connectViaPairCode() {
+    const code = this.dom.inputPairCode.value.trim();
+    if (code.length !== 4) {
+      alert('Please enter a 4-digit pair code (e.g. 4892)');
+      return;
+    }
+
+    this.dom.recSpeed.innerText = 'Connecting...';
+
+    if (typeof Peer !== 'undefined') {
+      try {
+        const clientPeer = new Peer();
+        clientPeer.on('open', () => {
+          const conn = clientPeer.connect('qrb-' + code);
+
+          conn.on('open', () => {
+            this.dom.recSpeed.innerText = 'P2P Connected!';
+            this.dom.receiverStatus.classList.add('active');
+            this.dom.receiverStatus.querySelector('.status-text').innerText = 'Connected!';
+
+            if (navigator.vibrate) navigator.vibrate(100);
+          });
+
+          conn.on('data', async (data) => {
+            if (data && data.meta) {
+              this.receiverMetadata = data.meta;
+              let assembledBytes = data.bytes ? new Uint8Array(data.bytes) : null;
+
+              if (this.receiverMetadata.isCompressed && assembledBytes) {
+                assembledBytes = await this.decompressData(assembledBytes);
+              }
+
+              this.completeReceiverDirect(assembledBytes);
+            }
+          });
+        });
+      } catch (e) {
+        alert('Wi-Fi connection error. Use camera scan fallback.');
+      }
+    }
+  }
+
   async populateCameraDevices() {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
@@ -650,8 +694,7 @@ class QRBeamApp {
       this.receiverScanLoop();
 
     } catch (err) {
-      console.error('Camera access error:', err);
-      alert('Unable to access camera. Please allow camera permissions in browser settings.');
+      alert('Unable to access camera. Use 4-digit Wi-Fi code entry.');
       this.dom.cameraPlaceholder.style.display = 'flex';
     }
   }
@@ -712,8 +755,8 @@ class QRBeamApp {
         this.qrWorker.postMessage({ imageData, width: scaleWidth, height: scaleHeight });
       } else if (typeof jsQR !== 'undefined') {
         const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
-        if (code) {
-          this.processScannedResult(code.data, code.binaryData ? Array.from(code.binaryData) : null);
+        if (code && code.data) {
+          this.processScannedPacket(code.data);
         }
       }
     }
@@ -721,42 +764,22 @@ class QRBeamApp {
     this.receiverScanAnimId = requestAnimationFrame(() => this.receiverScanLoop());
   }
 
-  processScannedResult(textData, binaryArray) {
-    let rawBytes = null;
-    if (binaryArray) {
-      rawBytes = new Uint8Array(binaryArray);
-    } else if (textData) {
-      const enc = new TextEncoder();
-      rawBytes = enc.encode(textData);
-    }
-
-    if (!rawBytes || rawBytes.length < 12) return;
-
-    // Parse Header: QRB1:[sessionId]:[chunkIndex]:[totalChunks]:
-    let headerEnd = -1;
-    let colonCount = 0;
-    for (let i = 0; i < Math.min(rawBytes.length, 64); i++) {
-      if (rawBytes[i] === 58) { // ':' ASCII
-        colonCount++;
-        if (colonCount === 4) {
-          headerEnd = i;
-          break;
-        }
+  processScannedPacket(qrData) {
+    if (qrData.includes('code=')) {
+      const matchCode = qrData.match(/code=([0-9]{4})/);
+      if (matchCode && matchCode[1]) {
+        this.dom.inputPairCode.value = matchCode[1];
+        this.connectViaPairCode();
+        return;
       }
     }
 
-    if (headerEnd === -1) return;
+    const match = qrData.match(/^(QRB1):([^:]+):([^:]+):([^:]+):(.*)$/);
+    if (!match) return;
 
-    const dec = new TextDecoder();
-    const headerStr = dec.decode(rawBytes.subarray(0, headerEnd));
-    const parts = headerStr.split(':');
-    if (parts.length !== 4 || parts[0] !== 'QRB1') return;
-
-    const sessionId = parts[1];
-    const chunkIndex = parseInt(parts[2], 10);
-    const totalChunks = parseInt(parts[3], 10);
-
-    const payloadBytes = rawBytes.subarray(headerEnd + 1);
+    const [_, magic, sessionId, indexStr, totalStr, payload] = match;
+    const chunkIndex = parseInt(indexStr, 10);
+    const totalChunks = parseInt(totalStr, 10);
 
     if (this.receiverSessionId !== sessionId) {
       this.initReceiverSession(sessionId, totalChunks);
@@ -766,7 +789,7 @@ class QRBeamApp {
       return;
     }
 
-    this.receiverChunks[chunkIndex] = payloadBytes;
+    this.receiverChunks[chunkIndex] = payload;
     this.receiverBitmap[chunkIndex] = true;
     this.receiverReceivedCount++;
 
@@ -774,8 +797,7 @@ class QRBeamApp {
 
     if (chunkIndex === 0) {
       try {
-        const metaStr = dec.decode(payloadBytes);
-        this.receiverMetadata = JSON.parse(metaStr);
+        this.receiverMetadata = JSON.parse(payload);
         this.dom.recFilename.innerText = this.receiverMetadata.name || (this.receiverMetadata.isLink ? 'Web Link' : 'Text Message');
         this.dom.recFilesize.innerText = this.formatBytes(this.receiverMetadata.size || 0);
       } catch (e) {
@@ -873,7 +895,7 @@ class QRBeamApp {
     this.receiverReceivedCount = 0;
     this.receiverMetadata = null;
 
-    this.dom.recFilename.innerText = 'Waiting for stream...';
+    this.dom.recFilename.innerText = 'Waiting for connection...';
     this.dom.recFilesize.innerText = '-- KB';
     this.dom.recChunksCount.innerText = '0 / 0';
     this.dom.recPercent.innerText = '0%';
@@ -890,35 +912,16 @@ class QRBeamApp {
     this.dom.defragStatusBadge.style.color = 'var(--md-sys-color-on-surface-variant)';
   }
 
-  async completeReceiverAssembly() {
-    if (navigator.vibrate) {
-      navigator.vibrate([100, 50, 100]);
-    }
-
+  completeReceiverDirect(assembledBytes) {
+    const meta = this.receiverMetadata || {};
     this.dom.defragStatusBadge.innerText = 'COMPLETE';
     this.dom.defragStatusBadge.style.color = 'var(--md-sys-color-success)';
     this.dom.completeBox.style.display = 'block';
 
-    const meta = this.receiverMetadata || {};
-
     if (meta.isLink || meta.isText) {
-      let rawText = '';
-      if (meta.isCompressed && this.receiverTotalChunks > 1) {
-        const slices = [];
-        for (let i = 1; i < this.receiverTotalChunks; i++) {
-          if (this.receiverChunks[i]) {
-            slices.push(this.receiverChunks[i]);
-          }
-        }
-        const combined = this.concatUint8Arrays(slices);
-        const decompressed = await this.decompressData(combined);
-        const dec = new TextDecoder();
-        rawText = dec.decode(decompressed);
-      } else {
-        rawText = meta.url || meta.text || '';
-      }
-
+      const rawText = meta.url || meta.text || (assembledBytes ? new TextDecoder().decode(assembledBytes) : '');
       const url = meta.url || (/^(https?:\/\/)/i.test(rawText) ? rawText : null);
+      
       this.dom.fileDownloadActions.style.display = 'none';
       this.dom.linkOpenActions.style.display = 'flex';
 
@@ -930,21 +933,7 @@ class QRBeamApp {
         this.dom.btnOpenLink.style.display = 'none';
         this.dom.completeSummary.innerText = `Text received: "${rawText}"`;
       }
-
     } else {
-      const dataSlices = [];
-      for (let i = 1; i < this.receiverTotalChunks; i++) {
-        if (this.receiverChunks[i]) {
-          dataSlices.push(this.receiverChunks[i]);
-        }
-      }
-
-      let assembledBytes = this.concatUint8Arrays(dataSlices);
-
-      if (meta.isCompressed) {
-        assembledBytes = await this.decompressData(assembledBytes);
-      }
-
       const mimeType = meta.type || 'application/octet-stream';
       const blob = new Blob([assembledBytes], { type: mimeType });
 
@@ -965,9 +954,30 @@ class QRBeamApp {
         document.body.removeChild(a);
       };
 
-      const originalInfo = meta.isCompressed ? ` (Decompressed from ${this.formatBytes(meta.compSize)} to ${this.formatBytes(blob.size)})` : ` (${this.formatBytes(blob.size)})`;
-      this.dom.completeSummary.innerText = `Successfully reassembled "${meta.name}"${originalInfo}`;
+      this.dom.completeSummary.innerText = `Successfully received "${meta.name}" (${this.formatBytes(blob.size)})`;
     }
+  }
+
+  async completeReceiverAssembly() {
+    if (navigator.vibrate) {
+      navigator.vibrate([100, 50, 100]);
+    }
+
+    const meta = this.receiverMetadata || {};
+    const dataSlices = [];
+    for (let i = 1; i < this.receiverTotalChunks; i++) {
+      if (this.receiverChunks[i]) {
+        dataSlices.push(this.base64ToUint8Array(this.receiverChunks[i]));
+      }
+    }
+
+    let assembledBytes = this.concatUint8Arrays(dataSlices);
+
+    if (meta.isCompressed) {
+      assembledBytes = await this.decompressData(assembledBytes);
+    }
+
+    this.completeReceiverDirect(assembledBytes);
   }
 
   concatUint8Arrays(arrays) {
@@ -992,6 +1002,25 @@ class QRBeamApp {
         console.error('Clipboard copy failed:', err);
       });
     }
+  }
+
+  uint8ArrayToBase64(uint8Array) {
+    let binary = '';
+    const len = uint8Array.byteLength;
+    for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(uint8Array[i]);
+    }
+    return btoa(binary);
+  }
+
+  base64ToUint8Array(base64) {
+    const binaryString = atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes;
   }
 
   formatBytes(bytes, decimals = 1) {

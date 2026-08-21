@@ -1092,14 +1092,69 @@ html, body {
   margin-bottom: 1.1rem;
 }
 
-.matrix-header {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.75rem;
+/* Pair Code Display & Receiver Entry Box */
+.m3-pair-code-display {
+  font-family: var(--md-font-mono);
+  font-size: 2.5rem;
   font-weight: 800;
+  letter-spacing: 0.25em;
+  color: var(--md-sys-color-primary);
+  margin: 0.5rem 0;
+  text-shadow: 0 0 20px rgba(155, 200, 255, 0.4);
+}
+
+.m3-code-entry-box {
+  background: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-shape-lg);
+  padding: 1.1rem;
+  margin-bottom: 1.1rem;
+}
+
+.m3-code-input-row {
+  display: flex;
+  gap: 0.65rem;
+  margin-top: 0.5rem;
+}
+
+.m3-code-input {
+  flex: 1;
+  background: var(--md-sys-color-surface-container-lowest);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-shape-full);
+  padding: 0.65rem 1rem;
+  font-family: var(--md-font-mono);
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  color: var(--md-sys-color-on-surface);
+  text-align: center;
+  outline: none;
+}
+
+.m3-code-input:focus {
+  border-color: var(--md-sys-color-primary);
+}
+
+.m3-divider-or {
+  display: flex;
+  align-items: center;
+  text-align: center;
   color: var(--md-sys-color-on-surface-variant);
-  text-transform: uppercase;
-  margin-bottom: 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin: 1rem 0;
+}
+
+.m3-divider-or::before, .m3-divider-or::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.m3-divider-or span {
+  padding: 0 0.65rem;
 }
 
 .m3-canvas-grid-wrapper {

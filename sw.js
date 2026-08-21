@@ -1,4 +1,4 @@
-const CACHE_NAME = 'qrbeam-v2';
+const CACHE_NAME = 'qrbeam-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -6,7 +6,8 @@ const ASSETS = [
   './app.js',
   './manifest.json',
   './libs/qrcode.min.js',
-  './libs/jsqr.min.js'
+  './libs/jsqr.min.js',
+  './libs/peerjs.min.js'
 ];
 
 self.addEventListener('install', (e) => {
