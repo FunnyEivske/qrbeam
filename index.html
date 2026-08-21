@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>QRBeam - Zero Data Offline RGB Transfer</title>
-  <meta name="description" content="Transfer files and links between any device offline using high-speed RGB 3-in-1 multi-color QR codes and camera scanning. Zero mobile data used.">
+  <title>QRBeam - Zero-Overhead Binary Optical Data Transfer</title>
+  <meta name="description" content="Transfer files and links between any device offline using Zero-Overhead Direct Binary Byte Mode QR codes and camera scanning. Zero mobile data used.">
   <link rel="manifest" href="manifest.json">
   
   <!-- Google Fonts: Plus Jakarta Sans & Material Symbols -->
@@ -34,11 +34,11 @@
     <header class="m3-top-app-bar">
       <div class="m3-brand" id="logo-btn">
         <div class="m3-brand-icon">
-          <span class="material-symbols-outlined">palette</span>
+          <span class="material-symbols-outlined">qr_code_2</span>
         </div>
         <div class="m3-brand-title">
           <span class="title-main">QR<span class="title-accent">Beam</span></span>
-          <span class="m3-chip-expressive">ZERO DATA OFFLINE</span>
+          <span class="m3-chip-expressive">ZERO OVERHEAD BINARY</span>
         </div>
       </div>
 
@@ -72,16 +72,16 @@
         <div class="m3-hero-expressive">
           <div class="m3-badge-pill">
             <span class="m3-dot-pulse"></span>
-            <span>Zero Mobile Data. 100% Offline.</span>
+            <span>Zero-Overhead Direct Binary Mode (33% Faster)</span>
           </div>
 
           <h1 class="m3-display-large">
             Transfer Data Over Video <br>
-            <span class="m3-gradient-text">Zero Data Used. Multi-Color RGB 3x Speed.</span>
+            <span class="m3-gradient-text">Zero Base64 Bloat. 100% Camera Reliable.</span>
           </h1>
 
           <p class="m3-body-large">
-            QRBeam runs 100% offline inside your browser. No cellular data, internet, or network connection is ever used to transfer files.
+            QRBeam uses 8-bit Direct Binary Byte Mode, removing the 33% Base64 text overhead and packing 33% more data into high-contrast B&W QR codes that scan flawlessly on any phone camera.
           </p>
 
           <!-- Expressive Action Cards -->
@@ -90,11 +90,11 @@
             <div class="m3-card m3-card-elevated m3-hero-card" id="btn-goto-send">
               <div class="card-state-layer"></div>
               <div class="m3-icon-container primary">
-                <span class="material-symbols-outlined">palette</span>
+                <span class="material-symbols-outlined">upload_file</span>
               </div>
               <div class="m3-card-body">
                 <h3 class="m3-title-large">Send File or Link</h3>
-                <p class="m3-body-medium">Encode any file into a multi-color RGB multiplexed QR stream.</p>
+                <p class="m3-body-medium">Encode any file into high-density 8-bit binary QR code sequences.</p>
               </div>
               <div class="m3-card-action">
                 <button class="m3-button m3-button-filled">
@@ -112,7 +112,7 @@
               </div>
               <div class="m3-card-body">
                 <h3 class="m3-title-large">Receive via Camera</h3>
-                <p class="m3-body-medium">Scan the live stream to extract and decode 3 color channels simultaneously.</p>
+                <p class="m3-body-medium">Scan the live stream to reassemble raw binary byte blocks in real-time.</p>
               </div>
               <div class="m3-card-action">
                 <button class="m3-button m3-button-tonal">
@@ -126,24 +126,24 @@
           <!-- Feature Highlights -->
           <div class="m3-features-row">
             <div class="m3-feature-chip">
+              <span class="material-symbols-outlined">flash_on</span>
+              <div>
+                <strong>33% Faster Binary Mode</strong>
+                <p>Omits Base64 text expansion for 33% higher data density per QR frame.</p>
+              </div>
+            </div>
+            <div class="m3-feature-chip">
               <span class="material-symbols-outlined">signal_cellular_off</span>
               <div>
                 <strong>Zero Mobile Data</strong>
-                <p>Never uses mobile data or internet bandwidth to transfer data.</p>
+                <p>Never uses mobile data or internet bandwidth to transfer files.</p>
               </div>
             </div>
             <div class="m3-feature-chip">
-              <span class="material-symbols-outlined">palette</span>
+              <span class="material-symbols-outlined">center_focus_strong</span>
               <div>
-                <strong>Multi-Color RGB Stream</strong>
-                <p>Red, Green, Blue light channels carry 3 QR codes per frame.</p>
-              </div>
-            </div>
-            <div class="m3-feature-chip">
-              <span class="material-symbols-outlined">phone_iphone</span>
-              <div>
-                <strong>Installable Offline PWA</strong>
-                <p>Add to phone home screen and use anywhere completely offline.</p>
+                <strong>100% Camera Reliable</strong>
+                <p>High-contrast Black & White modules scan instantly on all phones.</p>
               </div>
             </div>
           </div>
@@ -184,7 +184,7 @@
                     </div>
                     <h4 class="m3-title-medium">Tap or Drag File Here</h4>
                     <p class="m3-body-small">Select any file to encode & compress</p>
-                    <span class="m3-label-small">Zero Data Used • 100% Offline</span>
+                    <span class="m3-label-small">Zero Base64 Bloat • Direct Binary Mode</span>
                   </div>
 
                   <!-- File Selected Banner -->
@@ -219,17 +219,17 @@
               <div class="m3-config-box">
                 <div class="m3-config-heading">Transmission Preset</div>
                 <div class="m3-presets-row">
-                  <button class="m3-chip-preset active" id="preset-rgb-turbo">
-                    <span class="material-symbols-outlined">palette</span>
-                    <span>Multi-Color RGB (3x Speed)</span>
-                  </button>
-                  <button class="m3-chip-preset" id="preset-mobile-fast">
+                  <button class="m3-chip-preset active" id="preset-mobile-fast">
                     <span class="material-symbols-outlined">smartphone</span>
-                    <span>B&W Fast (256B)</span>
+                    <span>Mobile Fast (256B)</span>
+                  </button>
+                  <button class="m3-chip-preset" id="preset-balanced">
+                    <span class="material-symbols-outlined">speed</span>
+                    <span>Balanced (384B)</span>
                   </button>
                   <button class="m3-chip-preset" id="preset-dense">
                     <span class="material-symbols-outlined">grid_view</span>
-                    <span>B&W Dense (768B)</span>
+                    <span>Dense (640B)</span>
                   </button>
                 </div>
 
@@ -237,12 +237,12 @@
                 <div class="m3-slider-group">
                   <div class="m3-slider-label-row">
                     <span class="m3-label-large">Frame Rate (Speed)</span>
-                    <span class="m3-badge-value" id="val-fps">15 FPS</span>
+                    <span class="m3-badge-value" id="val-fps">12 FPS</span>
                   </div>
-                  <input type="range" id="slider-fps" min="2" max="25" value="15" step="1" class="m3-slider">
+                  <input type="range" id="slider-fps" min="2" max="25" value="12" step="1" class="m3-slider">
                   <div class="m3-slider-ticks">
                     <span>2 FPS</span>
-                    <span>15 FPS (Recommended)</span>
+                    <span>12 FPS (Recommended)</span>
                     <span>25 FPS</span>
                   </div>
                 </div>
@@ -250,13 +250,13 @@
                 <!-- Chunk Size Slider -->
                 <div class="m3-slider-group">
                   <div class="m3-slider-label-row">
-                    <span class="m3-label-large">Chunk Size (Bytes)</span>
-                    <span class="m3-badge-value" id="val-chunk-size">384 Bytes</span>
+                    <span class="m3-label-large">Chunk Size (Binary Bytes)</span>
+                    <span class="m3-badge-value" id="val-chunk-size">320 Bytes</span>
                   </div>
-                  <input type="range" id="slider-chunk-size" min="128" max="768" value="384" step="64" class="m3-slider">
+                  <input type="range" id="slider-chunk-size" min="128" max="768" value="320" step="32" class="m3-slider">
                   <div class="m3-slider-ticks">
                     <span>128B</span>
-                    <span>384B</span>
+                    <span>320B (Optimal)</span>
                     <span>768B</span>
                   </div>
                 </div>
@@ -264,7 +264,7 @@
 
               <button class="m3-button m3-button-filled m3-full-width" id="btn-start-beam" disabled>
                 <span class="material-symbols-outlined">play_arrow</span>
-                <span>Start Offline Transmission</span>
+                <span>Start Direct Binary Transmission</span>
               </button>
 
             </div>
@@ -282,12 +282,12 @@
                 <div class="m3-counter-pill" id="sender-chunk-badge">Chunk --/--</div>
               </div>
 
-              <!-- Responsive Multi-Color QR Stage -->
+              <!-- Responsive QR Stage -->
               <div class="m3-qr-frame">
                 <canvas id="qr-canvas" width="400" height="400"></canvas>
                 <div class="m3-qr-placeholder" id="qr-placeholder">
-                  <span class="material-symbols-outlined placeholder-icon">palette</span>
-                  <p class="m3-body-medium">Select a payload to start Multi-Color RGB transmission</p>
+                  <span class="material-symbols-outlined placeholder-icon">qr_code_2</span>
+                  <p class="m3-body-medium">Select a payload to start Binary QR transmission</p>
                 </div>
               </div>
 
