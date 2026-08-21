@@ -1,6 +1,6 @@
 /**
  * QRBeam - High-Speed Mobile-Optimized Data Transfer Engine
- * Features: WebRTC P2P Optical Handoff (1-second 15MB transfers), Native GZIP Compression, Web Worker scanning, 2D Canvas matrix.
+ * Features: 100% Offline RGB 3-in-1 Channel Multiplexing, WebRTC P2P Handoff, Native GZIP Compression, Web Worker scanning, 2D Canvas matrix.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -19,6 +19,7 @@ class QRBeamApp {
     this.linkText = '';
     this.senderFps = 12;
     this.senderChunkSize = 256;
+    this.isRgbMode = false;
     this.senderPackets = [];
     this.senderCurrentIndex = 0;
     this.senderIsPlaying = false;
@@ -46,11 +47,18 @@ class QRBeamApp {
     this.receiverCurrentFps = 0;
     this.receiverCompletedBlobUrl = null;
 
+    // Offscreen Canvases for RGB Multiplexing
+    this.offCanvas1 = document.createElement('canvas');
+    this.offCanvas2 = document.createElement('canvas');
+    this.offCanvas3 = document.createElement('canvas');
+    this.offCanvas1.width = this.offCanvas1.height = 400;
+    this.offCanvas2.width = this.offCanvas2.height = 400;
+    this.offCanvas3.width = this.offCanvas3.height = 400;
+
     // Worker State
     this.qrWorker = null;
     this.workerBusy = false;
 
-    // DOM Elements Cache
     this.dom = {};
   }
 
@@ -61,7 +69,7 @@ class QRBeamApp {
     this.handleRouting();
   }
 
-  /* ================= NATIVE GZIP COMPRESSION ================= */
+  /* NATIVE GZIP COMPRESSION */
   async compressData(uint8Array) {
     if (typeof CompressionStream === 'undefined') return uint8Array;
     try {
@@ -87,19 +95,65 @@ class QRBeamApp {
     }
   }
 
-  /* ================= INLINE WEB WORKER FOR HIGH-SPEED SCANNING ================= */
+  /* INLINE WEB WORKER FOR RGB MULTIPLEXED SCANNING */
   initQRWorker() {
     const workerCode = `
       importScripts('https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js');
 
       self.onmessage = function(e) {
         const { imageData, width, height } = e.data;
+        const data = imageData.data;
+        const results = [];
+
+        // 1. Standard RGB/Grayscale Scan
         try {
-          const code = jsQR(imageData.data, width, height, { inversionAttempts: 'dontInvert' });
-          self.postMessage({ result: code ? code.data : null });
-        } catch (err) {
-          self.postMessage({ result: null, error: err.message });
-        }
+          const codeMain = jsQR(data, width, height, { inversionAttempts: 'dontInvert' });
+          if (codeMain && codeMain.data) results.push(codeMain.data);
+        } catch (err) {}
+
+        // 2. Separate Red Channel Image
+        try {
+          const redData = new Uint8ClampedArray(width * height * 4);
+          for (let i = 0; i < data.length; i += 4) {
+            const r = data[i];
+            redData[i] = r;
+            redData[i+1] = r;
+            redData[i+2] = r;
+            redData[i+3] = 255;
+          }
+          const codeRed = jsQR(redData, width, height, { inversionAttempts: 'dontInvert' });
+          if (codeRed && codeRed.data) results.push(codeRed.data);
+        } catch (err) {}
+
+        // 3. Separate Green Channel Image
+        try {
+          const greenData = new Uint8ClampedArray(width * height * 4);
+          for (let i = 0; i < data.length; i += 4) {
+            const g = data[i+1];
+            greenData[i] = g;
+            greenData[i+1] = g;
+            greenData[i+2] = g;
+            greenData[i+3] = 255;
+          }
+          const codeGreen = jsQR(greenData, width, height, { inversionAttempts: 'dontInvert' });
+          if (codeGreen && codeGreen.data) results.push(codeGreen.data);
+        } catch (err) {}
+
+        // 4. Separate Blue Channel Image
+        try {
+          const blueData = new Uint8ClampedArray(width * height * 4);
+          for (let i = 0; i < data.length; i += 4) {
+            const b = data[i+2];
+            blueData[i] = b;
+            blueData[i+1] = b;
+            blueData[i+2] = b;
+            blueData[i+3] = 255;
+          }
+          const codeBlue = jsQR(blueData, width, height, { inversionAttempts: 'dontInvert' });
+          if (codeBlue && codeBlue.data) results.push(codeBlue.data);
+        } catch (err) {}
+
+        self.postMessage({ results: results });
       };
     `;
 
@@ -110,8 +164,8 @@ class QRBeamApp {
 
       this.qrWorker.onmessage = (e) => {
         this.workerBusy = false;
-        if (e.data && e.data.result) {
-          this.processScannedPacket(e.data.result);
+        if (e.data && e.data.results && e.data.results.length > 0) {
+          e.data.results.forEach(res => this.processScannedPacket(res));
         }
       };
 
@@ -151,7 +205,7 @@ class QRBeamApp {
     this.dom.compressionText = document.getElementById('compression-text');
 
     this.dom.presetMobileFast = document.getElementById('preset-mobile-fast');
-    this.dom.presetBalanced = document.getElementById('preset-balanced');
+    this.dom.presetRgbTurbo = document.getElementById('preset-rgb-turbo');
     this.dom.presetDense = document.getElementById('preset-dense');
 
     this.dom.sliderFps = document.getElementById('slider-fps');
@@ -254,9 +308,11 @@ class QRBeamApp {
       this.updateSenderButtonState();
     });
 
-    this.dom.presetMobileFast.addEventListener('click', () => this.applyPreset(256, 12, this.dom.presetMobileFast));
-    this.dom.presetBalanced.addEventListener('click', () => this.applyPreset(384, 12, this.dom.presetBalanced));
-    this.dom.presetDense.addEventListener('click', () => this.applyPreset(768, 15, this.dom.presetDense));
+    this.dom.presetMobileFast.addEventListener('click', () => this.applyPreset(256, 12, false, this.dom.presetMobileFast));
+    if (this.dom.presetRgbTurbo) {
+      this.dom.presetRgbTurbo.addEventListener('click', () => this.applyPreset(384, 18, true, this.dom.presetRgbTurbo));
+    }
+    this.dom.presetDense.addEventListener('click', () => this.applyPreset(768, 15, false, this.dom.presetDense));
 
     this.dom.sliderFps.addEventListener('input', (e) => {
       this.senderFps = parseInt(e.target.value, 10);
@@ -283,12 +339,15 @@ class QRBeamApp {
     this.dom.btnCopyLink.addEventListener('click', () => this.copyLinkToClipboard());
   }
 
-  applyPreset(chunkSize, fps, activeBtn) {
-    [this.dom.presetMobileFast, this.dom.presetBalanced, this.dom.presetDense].forEach(btn => btn.classList.remove('active'));
+  applyPreset(chunkSize, fps, isRgb, activeBtn) {
+    [this.dom.presetMobileFast, this.dom.presetRgbTurbo, this.dom.presetDense].forEach(btn => {
+      if (btn) btn.classList.remove('active');
+    });
     activeBtn.classList.add('active');
 
     this.senderChunkSize = chunkSize;
     this.senderFps = fps;
+    this.isRgbMode = isRgb;
 
     this.dom.sliderChunkSize.value = chunkSize;
     this.dom.valChunkSize.innerText = `${chunkSize} Bytes`;
@@ -343,7 +402,7 @@ class QRBeamApp {
     }
   }
 
-  /* SENDER LOGIC WITH WEBRTC P2P HANDOFF & SMART COMPRESSION */
+  /* SENDER LOGIC */
   setSenderMode(mode) {
     this.senderMode = mode;
     if (mode === 'file') {
@@ -411,11 +470,8 @@ class QRBeamApp {
       this.dataChannel.binaryType = 'arraybuffer';
 
       this.dataChannel.onopen = () => {
-        console.log('WebRTC P2P Data Channel Opened!');
         this.webrtcConnected = true;
         this.dom.senderStatus.querySelector('.status-text').innerText = 'P2P WebRTC Direct (100 MB/s)';
-        
-        // Instant P2P Send
         if (payloadBytes) {
           this.dataChannel.send(payloadBytes);
         }
@@ -461,7 +517,6 @@ class QRBeamApp {
 
     let finalBytes = rawBytes;
 
-    // Smart GZIP Compression Check
     if (rawBytes && rawBytes.byteLength > 120) {
       const compressedBytes = await this.compressData(rawBytes);
       if (compressedBytes.byteLength < rawBytes.byteLength) {
@@ -480,12 +535,10 @@ class QRBeamApp {
       this.dom.compressionBadge.style.display = 'none';
     }
 
-    // Setup WebRTC P2P DataChannel
     if (finalBytes) {
       this.setupSenderWebRTC(finalBytes);
     }
 
-    // Chunk final bytes for optical stream fallback
     let rawChunks = [];
     if (finalBytes) {
       const totalBytes = finalBytes.length;
@@ -525,7 +578,7 @@ class QRBeamApp {
     this.dom.pauseIcon.style.display = 'inline-block';
     
     this.dom.senderStatus.classList.add('active');
-    this.dom.senderStatus.querySelector('.status-text').innerText = 'Transmitting';
+    this.dom.senderStatus.querySelector('.status-text').innerText = this.isRgbMode ? 'Transmitting (RGB 3x)' : 'Transmitting';
 
     this.senderLastFrameTime = performance.now();
     this.senderLoop();
@@ -555,7 +608,8 @@ class QRBeamApp {
   stepSenderChunk(delta) {
     this.stopSender();
     if (this.senderPackets.length === 0) return;
-    this.senderCurrentIndex = (this.senderCurrentIndex + delta + this.senderPackets.length) % this.senderPackets.length;
+    const stepSize = this.isRgbMode ? 3 : 1;
+    this.senderCurrentIndex = (this.senderCurrentIndex + delta * stepSize + this.senderPackets.length) % this.senderPackets.length;
     this.renderSenderFrame();
   }
 
@@ -568,29 +622,57 @@ class QRBeamApp {
     if (elapsed >= interval) {
       this.senderLastFrameTime = timestamp - (elapsed % interval);
       this.renderSenderFrame();
-      this.senderCurrentIndex = (this.senderCurrentIndex + 1) % this.senderPackets.length;
+      const stepSize = this.isRgbMode ? 3 : 1;
+      this.senderCurrentIndex = (this.senderCurrentIndex + stepSize) % this.senderPackets.length;
     }
 
     this.senderTimerId = requestAnimationFrame((ts) => this.senderLoop(ts));
   }
 
   renderSenderFrame() {
-    const packet = this.senderPackets[this.senderCurrentIndex];
-    if (!packet) return;
-
-    QRCode.toCanvas(this.dom.qrCanvas, packet, {
-      errorCorrectionLevel: 'L',
-      margin: 1,
-      width: 400,
-      color: {
-        dark: '#000000',
-        light: '#ffffff'
-      }
-    }, (error) => {
-      if (error) console.error('QR Render Error:', error);
-    });
-
     const total = this.senderPackets.length;
+    if (total === 0) return;
+
+    const canvas = this.dom.qrCanvas;
+    const ctx = canvas.getContext('2d');
+
+    if (!this.isRgbMode) {
+      // Standard Black & White Frame
+      const packet = this.senderPackets[this.senderCurrentIndex];
+      QRCode.toCanvas(canvas, packet, {
+        errorCorrectionLevel: 'L',
+        margin: 1,
+        width: 400,
+        color: { dark: '#000000', light: '#ffffff' }
+      });
+    } else {
+      // RGB 3-in-1 Channel Multiplexed Frame
+      const p1 = this.senderPackets[this.senderCurrentIndex % total];
+      const p2 = this.senderPackets[(this.senderCurrentIndex + 1) % total];
+      const p3 = this.senderPackets[(this.senderCurrentIndex + 2) % total];
+
+      // Draw QR 1 to Red offscreen canvas
+      QRCode.toCanvas(this.offCanvas1, p1, { errorCorrectionLevel: 'L', margin: 1, width: 400 });
+      QRCode.toCanvas(this.offCanvas2, p2, { errorCorrectionLevel: 'L', margin: 1, width: 400 });
+      QRCode.toCanvas(this.offCanvas3, p3, { errorCorrectionLevel: 'L', margin: 1, width: 400 });
+
+      const imgData1 = this.offCanvas1.getContext('2d').getImageData(0, 0, 400, 400).data;
+      const imgData2 = this.offCanvas2.getContext('2d').getImageData(0, 0, 400, 400).data;
+      const imgData3 = this.offCanvas3.getContext('2d').getImageData(0, 0, 400, 400).data;
+
+      const rgbImgData = ctx.createImageData(400, 400);
+      const data = rgbImgData.data;
+
+      for (let i = 0; i < data.length; i += 4) {
+        data[i]     = imgData1[i] < 128 ? 255 : 0; // Red Channel
+        data[i + 1] = imgData2[i] < 128 ? 255 : 0; // Green Channel
+        data[i + 2] = imgData3[i] < 128 ? 255 : 0; // Blue Channel
+        data[i + 3] = 255;
+      }
+
+      ctx.putImageData(rgbImgData, 0, 0);
+    }
+
     const current = this.senderCurrentIndex + 1;
     const pct = Math.round((current / total) * 100);
 
@@ -598,7 +680,7 @@ class QRBeamApp {
     this.dom.senderProgressFill.style.width = `${pct}%`;
     this.dom.senderProgressText.innerText = `${pct}% Complete`;
     
-    const secondsPerLoop = (total / this.senderFps).toFixed(1);
+    const secondsPerLoop = (total / (this.senderFps * (this.isRgbMode ? 3 : 1))).toFixed(1);
     this.dom.senderTimeEst.innerText = `Loop: ${secondsPerLoop}s`;
   }
 

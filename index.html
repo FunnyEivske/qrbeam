@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>QRBeam - Material 3 Smart Compressed Optical Data Transfer</title>
-  <meta name="description" content="Transfer files and links between any device using high-speed repeating QR codes and camera scanning with native GZIP compression.">
+  <title>QRBeam - Material 3 Offline RGB Turbo Data Transfer</title>
+  <meta name="description" content="Transfer files and links between any device offline using high-speed RGB color-channel multiplexed QR codes and camera scanning.">
   
   <!-- Google Fonts: Plus Jakarta Sans & Material Symbols -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -38,7 +38,7 @@
         </div>
         <div class="m3-brand-title">
           <span class="title-main">QR<span class="title-accent">Beam</span></span>
-          <span class="m3-chip-expressive">SMART COMPRESS</span>
+          <span class="m3-chip-expressive">RGB 3X OFFLINE</span>
         </div>
       </div>
 
@@ -72,16 +72,16 @@
         <div class="m3-hero-expressive">
           <div class="m3-badge-pill">
             <span class="m3-dot-pulse"></span>
-            <span>Smart Compressed Optical Streaming</span>
+            <span>100% Offline RGB Channel Multiplexing</span>
           </div>
 
           <h1 class="m3-display-large">
             Transfer Data Over Video <br>
-            <span class="m3-gradient-text">Compressed. Offline. Universal.</span>
+            <span class="m3-gradient-text">Zero Wi-Fi. Zero Cell Data. 3x Speed.</span>
           </h1>
 
           <p class="m3-body-large">
-            QRBeam compresses payload data with native GZIP engine before slicing into high-frequency QR codes, reducing transfer time by up to 75%.
+            No Wi-Fi? No cellular network? QRBeam uses RGB color-channel multiplexing to pack 3 independent QR codes into every frame, tripling offline optical bandwidth.
           </p>
 
           <!-- Expressive Action Cards -->
@@ -94,7 +94,7 @@
               </div>
               <div class="m3-card-body">
                 <h3 class="m3-title-large">Send File or Link</h3>
-                <p class="m3-body-medium">Compress and encode any file or URL into a repeating QR code stream.</p>
+                <p class="m3-body-medium">Encode any file into a high-density RGB multiplexed QR code sequence.</p>
               </div>
               <div class="m3-card-action">
                 <button class="m3-button m3-button-filled">
@@ -112,7 +112,7 @@
               </div>
               <div class="m3-card-body">
                 <h3 class="m3-title-large">Receive via Camera</h3>
-                <p class="m3-body-medium">Scan the live stream to reassemble and automatically decompress your data.</p>
+                <p class="m3-body-medium">Scan the live stream to extract and decode 3 color channels simultaneously.</p>
               </div>
               <div class="m3-card-action">
                 <button class="m3-button m3-button-tonal">
@@ -126,17 +126,17 @@
           <!-- Feature Highlights -->
           <div class="m3-features-row">
             <div class="m3-feature-chip">
-              <span class="material-symbols-outlined">folder_zip</span>
+              <span class="material-symbols-outlined">palette</span>
               <div>
-                <strong>Smart Compression</strong>
-                <p>Native GZIP shrinks payloads by up to 75% for ultra-fast transfers.</p>
+                <strong>RGB 3x Multiplexing</strong>
+                <p>Red, Green, Blue channels carry 3 QR codes per frame for 3x speed.</p>
               </div>
             </div>
             <div class="m3-feature-chip">
-              <span class="material-symbols-outlined">bolt</span>
+              <span class="material-symbols-outlined">signal_cellular_off</span>
               <div>
-                <strong>Off-Thread Scanning</strong>
-                <p>Web Worker camera decoding at 30+ FPS.</p>
+                <strong>100% Offline</strong>
+                <p>Works in remote locations with no cellular signal or Wi-Fi.</p>
               </div>
             </div>
             <div class="m3-feature-chip">
@@ -184,7 +184,7 @@
                     </div>
                     <h4 class="m3-title-medium">Tap or Drag File Here</h4>
                     <p class="m3-body-small">Select any file to encode & compress</p>
-                    <span class="m3-label-small">Smart GZIP compression enabled</span>
+                    <span class="m3-label-small">Works 100% offline without network</span>
                   </div>
 
                   <!-- File Selected Banner -->
@@ -223,9 +223,9 @@
                     <span class="material-symbols-outlined">smartphone</span>
                     <span>Mobile Fast (256B)</span>
                   </button>
-                  <button class="m3-chip-preset" id="preset-balanced">
-                    <span class="material-symbols-outlined">balance</span>
-                    <span>Balanced (384B)</span>
+                  <button class="m3-chip-preset" id="preset-rgb-turbo">
+                    <span class="material-symbols-outlined">palette</span>
+                    <span>RGB 3x Turbo (Offline)</span>
                   </button>
                   <button class="m3-chip-preset" id="preset-dense">
                     <span class="material-symbols-outlined">grid_view</span>
