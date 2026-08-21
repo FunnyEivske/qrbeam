@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>QRBeam v3.2.0 - Universal Multi-Protocol Device Communicator</title>
+  <title>QRBeam v3.2.1 - Universal Multi-Protocol Device Communicator</title>
   <meta name="description" content="Universal peer-to-peer data communicator supporting Optical QR, Acoustic Sound Modems, Bluetooth BLE, NFC Beam, Radio Serial, and Wi-Fi P2P.">
   <link rel="manifest" href="manifest.json">
   
@@ -38,7 +38,7 @@
         </div>
         <div class="m3-brand-title">
           <span class="title-main">QR<span class="title-accent">Beam</span></span>
-          <span class="m3-chip-version">v3.2.0</span>
+          <span class="m3-chip-version">v3.2.1</span>
         </div>
       </div>
 
@@ -141,7 +141,7 @@
               <span class="material-symbols-outlined">bluetooth</span>
               <div>
                 <strong>Bluetooth Low Energy</strong>
-                <p>Wireless GATT characteristic stream between nearby devices.</p>
+                <p>Wireless characteristic stream between nearby devices.</p>
               </div>
             </div>
             <div class="m3-feature-chip">
@@ -313,11 +313,11 @@
 
               </div>
 
-              <!-- Wi-Fi Pair Card -->
+              <!-- Wi-Fi / Bluetooth Pair Card -->
               <div class="m3-config-box text-center" id="sender-p2p-card">
-                <div class="m3-config-heading">Wi-Fi Direct Pair Code</div>
+                <div class="m3-config-heading">Direct Pair Code</div>
                 <div class="m3-pair-code-display" id="pair-code-val">----</div>
-                <p class="m3-body-small color-sub">Enter this 4-digit code on receiver or scan QR to transfer in 1 second</p>
+                <p class="m3-body-small color-sub">Enter this 4-digit code on receiver or scan QR to pair instantly</p>
               </div>
 
               <button class="m3-button m3-button-filled m3-full-width" id="btn-start-beam" disabled>
@@ -364,6 +364,10 @@
                   <span class="material-symbols-outlined font-xxl color-primary" id="hardware-icon">bluetooth</span>
                   <h3 class="m3-title-medium margin-top-sm" id="hardware-title">Bluetooth Ready</h3>
                   <p class="m3-body-small color-sub" id="hardware-desc">Ready to stream data to connected devices.</p>
+                  <button class="m3-button m3-button-tonal margin-top-sm" id="btn-sender-hw-connect">
+                    <span class="material-symbols-outlined">bluetooth_searching</span>
+                    <span>Pair Nearby Device</span>
+                  </button>
                 </div>
               </div>
 
@@ -435,14 +439,14 @@
                 </div>
               </div>
 
-              <!-- 4-Digit Code Input Box (Instant Wi-Fi P2P) -->
+              <!-- 4-Digit Code Input Box (Instant Direct P2P) -->
               <div class="m3-code-entry-box">
-                <label for="input-pair-code" class="m3-label-large">Wi-Fi 4-Digit Pair Code</label>
+                <label for="input-pair-code" class="m3-label-large">Direct 4-Digit Pair Code</label>
                 <div class="m3-code-input-row">
                   <input type="text" id="input-pair-code" maxlength="4" placeholder="4892" class="m3-code-input" pattern="[0-9]*" inputmode="numeric">
                   <button class="m3-button m3-button-filled" id="btn-connect-code">
                     <span class="material-symbols-outlined">bolt</span>
-                    <span>Connect P2P</span>
+                    <span>Connect Direct</span>
                   </button>
                 </div>
               </div>

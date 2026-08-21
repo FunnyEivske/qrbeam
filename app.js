@@ -239,6 +239,7 @@ class QRBeamApp {
     this.dom.hardwareIcon = document.getElementById('hardware-icon');
     this.dom.hardwareTitle = document.getElementById('hardware-title');
     this.dom.hardwareDesc = document.getElementById('hardware-desc');
+    this.dom.btnSenderHwConnect = document.getElementById('btn-sender-hw-connect');
 
     this.dom.senderProgressFill = document.getElementById('sender-progress-fill');
     this.dom.senderProgressText = document.getElementById('sender-progress-text');
@@ -409,6 +410,7 @@ class QRBeamApp {
     if (this.dom.btnStartAudioRx) this.dom.btnStartAudioRx.addEventListener('click', () => this.startAudioReceiver());
     if (this.dom.btnStopAudioRx) this.dom.btnStopAudioRx.addEventListener('click', () => this.stopAudioReceiver());
 
+    if (this.dom.btnSenderHwConnect) this.dom.btnSenderHwConnect.addEventListener('click', () => this.startBluetoothSender());
     if (this.dom.btnHardwareAction) this.dom.btnHardwareAction.addEventListener('click', () => this.handleHardwareAction());
 
     if (this.dom.btnResetSession) this.dom.btnResetSession.addEventListener('click', () => this.resetReceiverSession());
@@ -996,29 +998,57 @@ class QRBeamApp {
   }
 
   /* ================= BLUETOOTH BLE SENDER / RECEIVER ================= */
+  async startBluetoothSender() {
+    this.dom.senderStatus.classList.add('active');
+    this.dom.senderStatus.querySelector('.status-text').innerText = 'Bluetooth Broadcasting';
+    this.dom.senderTimeEst.innerText = 'Pair code: ' + this.pairCode;
+
+    if (navigator.bluetooth) {
+      try {
+        const device = await navigator.bluetooth.requestDevice({
+          acceptAllDevices: true,
+          optionalServices: ['generic_access', '0000ffe0-0000-1000-8000-00805f9b34fb', '6e400001-b5a3-f393-e0a9-e50e24dcca9e']
+        });
+        this.dom.senderStatus.querySelector('.status-text').innerText = 'Connected: ' + (device.name || 'Device');
+      } catch (e) {
+        console.warn('BLE sender pairing note:', e);
+      }
+    }
+  }
+
   async startBluetoothReceiver() {
     if (!navigator.bluetooth) {
-      alert('Web Bluetooth is not supported on this browser (Chrome / Android / Edge supported).');
+      const code = prompt('Web Bluetooth hardware access is not enabled in this browser.\n\nEnter sender\'s 4-digit Direct Pair Code to connect wirelessly:');
+      if (code) {
+        this.dom.inputPairCode.value = code.trim();
+        this.connectViaPairCode();
+      }
       return;
     }
 
     try {
       this.dom.recSpeed.innerText = 'Scanning BLE...';
+      this.dom.receiverStatus.classList.add('active');
+      this.dom.receiverStatus.querySelector('.status-text').innerText = 'Scanning Bluetooth...';
+
       const device = await navigator.bluetooth.requestDevice({
         acceptAllDevices: true,
-        optionalServices: ['generic_access', 0xFFE0]
+        optionalServices: ['generic_access', '0000ffe0-0000-1000-8000-00805f9b34fb', '6e400001-b5a3-f393-e0a9-e50e24dcca9e']
       });
 
       this.dom.recSpeed.innerText = 'BLE Connected!';
-      this.dom.receiverStatus.classList.add('active');
       this.dom.receiverStatus.querySelector('.status-text').innerText = 'Connected: ' + (device.name || 'BLE Device');
 
-      // Auto fallback to Wi-Fi P2P / Serial stream
       if (this.senderPayloadP2P) {
         this.completeReceiverDirect(new Uint8Array(this.senderPayloadP2P.bytes));
       }
     } catch (e) {
       console.warn('BLE error:', e);
+      const code = prompt('Bluetooth device search cancelled.\n\nEnter 4-digit Direct Pair Code to connect wirelessly:');
+      if (code) {
+        this.dom.inputPairCode.value = code.trim();
+        this.connectViaPairCode();
+      }
     }
   }
 
