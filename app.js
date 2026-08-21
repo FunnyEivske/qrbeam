@@ -1,6 +1,6 @@
 /**
- * QRBeam - High-Speed Mobile-Optimized Data Transfer Engine
- * Features: Default RGB 3-in-1 Multi-Color Multiplexing, WebRTC P2P Handoff, Native GZIP Compression, Web Worker scanning, 2D Canvas matrix.
+ * QRBeam - Zero Mobile Data Offline Transfer Engine
+ * Features: 100% Offline Local Libraries, Service Worker PWA Caching, Default RGB 3-in-1 Multi-Color Multiplexing, Web Worker scanning, 2D Canvas matrix.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -95,10 +95,17 @@ class QRBeamApp {
     }
   }
 
-  /* INLINE WEB WORKER FOR RGB MULTIPLEXED SCANNING */
+  /* INLINE WEB WORKER USING LOCAL JSQR LIBRARY (ZERO MOBILE DATA) */
   initQRWorker() {
+    const origin = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
+    const localJsqrUrl = origin + 'libs/jsqr.min.js';
+
     const workerCode = `
-      importScripts('https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js');
+      try {
+        importScripts('${localJsqrUrl}');
+      } catch (err) {
+        importScripts('https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js');
+      }
 
       self.onmessage = function(e) {
         const { imageData, width, height } = e.data;

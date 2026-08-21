@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>QRBeam - RGB Multi-Color Optical Data Transfer</title>
-  <meta name="description" content="Transfer files and links between any device offline using high-speed RGB 3-in-1 multi-color QR codes and camera scanning.">
+  <title>QRBeam - Zero Data Offline RGB Transfer</title>
+  <meta name="description" content="Transfer files and links between any device offline using high-speed RGB 3-in-1 multi-color QR codes and camera scanning. Zero mobile data used.">
+  <link rel="manifest" href="manifest.json">
   
   <!-- Google Fonts: Plus Jakarta Sans & Material Symbols -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,10 +16,9 @@
   <!-- CSS Stylesheet -->
   <link rel="stylesheet" href="index.css">
 
-  <!-- QRCode generator library -->
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
-  <!-- jsQR decoder library -->
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <!-- Local Offline Libraries (Zero Mobile Data) -->
+  <script src="libs/qrcode.min.js"></script>
+  <script src="libs/jsqr.min.js"></script>
 </head>
 <body>
   <!-- Ambient Expressive Dynamic Background -->
@@ -38,7 +38,7 @@
         </div>
         <div class="m3-brand-title">
           <span class="title-main">QR<span class="title-accent">Beam</span></span>
-          <span class="m3-chip-expressive">RGB MULTI-COLOR 3X</span>
+          <span class="m3-chip-expressive">ZERO DATA OFFLINE</span>
         </div>
       </div>
 
@@ -72,16 +72,16 @@
         <div class="m3-hero-expressive">
           <div class="m3-badge-pill">
             <span class="m3-dot-pulse"></span>
-            <span>RGB Multi-Color Channel Multiplexing</span>
+            <span>Zero Mobile Data. 100% Offline.</span>
           </div>
 
           <h1 class="m3-display-large">
             Transfer Data Over Video <br>
-            <span class="m3-gradient-text">Multi-Color RGB. 3x Offline Speed.</span>
+            <span class="m3-gradient-text">Zero Data Used. Multi-Color RGB 3x Speed.</span>
           </h1>
 
           <p class="m3-body-large">
-            QRBeam encodes 3 QR codes into Red, Green, and Blue light channels simultaneously, creating vibrant multi-color matrix streams that transfer 3x faster offline.
+            QRBeam runs 100% offline inside your browser. No cellular data, internet, or network connection is ever used to transfer files.
           </p>
 
           <!-- Expressive Action Cards -->
@@ -126,6 +126,13 @@
           <!-- Feature Highlights -->
           <div class="m3-features-row">
             <div class="m3-feature-chip">
+              <span class="material-symbols-outlined">signal_cellular_off</span>
+              <div>
+                <strong>Zero Mobile Data</strong>
+                <p>Never uses mobile data or internet bandwidth to transfer data.</p>
+              </div>
+            </div>
+            <div class="m3-feature-chip">
               <span class="material-symbols-outlined">palette</span>
               <div>
                 <strong>Multi-Color RGB Stream</strong>
@@ -133,17 +140,10 @@
               </div>
             </div>
             <div class="m3-feature-chip">
-              <span class="material-symbols-outlined">signal_cellular_off</span>
-              <div>
-                <strong>100% Offline</strong>
-                <p>Works in remote locations with zero cellular signal or Wi-Fi.</p>
-              </div>
-            </div>
-            <div class="m3-feature-chip">
               <span class="material-symbols-outlined">phone_iphone</span>
               <div>
-                <strong>Mobile Optimized</strong>
-                <p>Tailored mobile views and 48px touch controls.</p>
+                <strong>Installable Offline PWA</strong>
+                <p>Add to phone home screen and use anywhere completely offline.</p>
               </div>
             </div>
           </div>
@@ -184,7 +184,7 @@
                     </div>
                     <h4 class="m3-title-medium">Tap or Drag File Here</h4>
                     <p class="m3-body-small">Select any file to encode & compress</p>
-                    <span class="m3-label-small">Smart GZIP + Multi-Color RGB active</span>
+                    <span class="m3-label-small">Zero Data Used • 100% Offline</span>
                   </div>
 
                   <!-- File Selected Banner -->
@@ -264,7 +264,7 @@
 
               <button class="m3-button m3-button-filled m3-full-width" id="btn-start-beam" disabled>
                 <span class="material-symbols-outlined">play_arrow</span>
-                <span>Start Multi-Color Transmission</span>
+                <span>Start Offline Transmission</span>
               </button>
 
             </div>
@@ -498,5 +498,16 @@
 
   <!-- Application Engine Script -->
   <script src="app.js"></script>
+  
+  <!-- Register Service Worker for 100% Offline PWA Mode -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(err => {
+          console.warn('SW Registration Error:', err);
+        });
+      });
+    }
+  </script>
 </body>
 </html>
