@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>QRBeam v3.2.1 - Universal Multi-Protocol Device Communicator</title>
+  <title>QRBeam v3.3.0 - Universal Multi-Protocol Device Communicator</title>
   <meta name="description" content="Universal peer-to-peer data communicator supporting Optical QR, Acoustic Sound Modems, Bluetooth BLE, NFC Beam, Radio Serial, and Wi-Fi P2P.">
   <link rel="manifest" href="manifest.json">
   
@@ -38,7 +38,7 @@
         </div>
         <div class="m3-brand-title">
           <span class="title-main">QR<span class="title-accent">Beam</span></span>
-          <span class="m3-chip-version">v3.2.1</span>
+          <span class="m3-chip-version">v3.3.0</span>
         </div>
       </div>
 
@@ -412,17 +412,18 @@
           <div class="m3-grid-col">
             <div class="m3-card m3-card-outlined m3-scanner-card">
               
-              <div class="m3-card-header">
+              <div class="m3-card-header flex-column-mobile">
                 <h2 class="m3-title-medium">Receive Medium</h2>
                 
-                <div class="m3-segmented-button">
+                <!-- Horizontally Scrollable Segmented Row for Mobile -->
+                <div class="m3-segmented-button-scroll">
                   <button class="m3-segment-item active" id="rec-mode-camera">
                     <span class="material-symbols-outlined">photo_camera</span>
                     <span>Camera</span>
                   </button>
                   <button class="m3-segment-item" id="rec-mode-audio">
                     <span class="material-symbols-outlined">mic</span>
-                    <span>Audio</span>
+                    <span>Audio Mic</span>
                   </button>
                   <button class="m3-segment-item" id="rec-mode-ble">
                     <span class="material-symbols-outlined">bluetooth_searching</span>
@@ -481,18 +482,30 @@
                 </div>
               </div>
 
-              <!-- Audio Modem Microphone Visualizer -->
+              <!-- Audio Modem Microphone Visualizer GUI -->
               <div class="m3-audio-rx-container" id="audio-rx-box" style="display: none;">
                 <canvas id="audio-rx-canvas" width="400" height="220"></canvas>
+                
                 <div class="m3-audio-rx-overlay" id="audio-rx-placeholder">
                   <div class="m3-camera-icon-bg">
                     <span class="material-symbols-outlined">mic</span>
                   </div>
-                  <h3 class="m3-title-large">Enable Audio Modem Listener</h3>
-                  <p class="m3-body-small">Listen for acoustic dial-up modem frequencies through microphone</p>
+                  <h3 class="m3-title-large">Audio Modem Listener</h3>
+                  <p class="m3-body-small">Capture acoustic dialup FSK tones through device microphone</p>
                   <button class="m3-button m3-button-filled" id="btn-start-audio-rx">
                     <span class="material-symbols-outlined">mic</span>
                     <span>Listen for Sound</span>
+                  </button>
+                </div>
+
+                <div class="m3-audio-live-hud" id="audio-rx-hud" style="display: none;">
+                  <div class="hud-item">
+                    <span class="material-symbols-outlined sound-pulse-icon">graphic_eq</span>
+                    <span id="audio-rx-signal-label" class="m3-mono-text">Listening...</span>
+                  </div>
+                  <button class="m3-chip-preset danger" id="btn-stop-audio-rx-mini">
+                    <span class="material-symbols-outlined">mic_off</span>
+                    <span>Stop</span>
                   </button>
                 </div>
               </div>
@@ -517,7 +530,7 @@
                 </button>
                 <button class="m3-button m3-button-tonal m3-full-width" id="btn-stop-audio-rx" style="display: none;">
                   <span class="material-symbols-outlined">mic_off</span>
-                  <span>Stop Listening</span>
+                  <span>Stop Audio Listener</span>
                 </button>
               </div>
 

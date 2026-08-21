@@ -270,8 +270,11 @@ class QRBeamApp {
     this.dom.audioRxBox = document.getElementById('audio-rx-box');
     this.dom.audioRxCanvas = document.getElementById('audio-rx-canvas');
     this.dom.audioRxPlaceholder = document.getElementById('audio-rx-placeholder');
+    this.dom.audioRxHud = document.getElementById('audio-rx-hud');
+    this.dom.audioRxSignalLabel = document.getElementById('audio-rx-signal-label');
     this.dom.btnStartAudioRx = document.getElementById('btn-start-audio-rx');
     this.dom.btnStopAudioRx = document.getElementById('btn-stop-audio-rx');
+    this.dom.btnStopAudioRxMini = document.getElementById('btn-stop-audio-rx-mini');
 
     this.dom.hardwareRxBox = document.getElementById('hardware-rx-box');
     this.dom.hardwareRxIcon = document.getElementById('hardware-rx-icon');
@@ -409,6 +412,7 @@ class QRBeamApp {
 
     if (this.dom.btnStartAudioRx) this.dom.btnStartAudioRx.addEventListener('click', () => this.startAudioReceiver());
     if (this.dom.btnStopAudioRx) this.dom.btnStopAudioRx.addEventListener('click', () => this.stopAudioReceiver());
+    if (this.dom.btnStopAudioRxMini) this.dom.btnStopAudioRxMini.addEventListener('click', () => this.stopAudioReceiver());
 
     if (this.dom.btnSenderHwConnect) this.dom.btnSenderHwConnect.addEventListener('click', () => this.startBluetoothSender());
     if (this.dom.btnHardwareAction) this.dom.btnHardwareAction.addEventListener('click', () => this.handleHardwareAction());
@@ -1157,6 +1161,10 @@ class QRBeamApp {
   async startAudioReceiver() {
     try {
       this.audioRxCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (this.audioRxCtx.state === 'suspended') {
+        await this.audioRxCtx.resume();
+      }
+
       this.audioRxStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
       const source = this.audioRxCtx.createMediaStreamSource(this.audioRxStream);
@@ -1167,6 +1175,7 @@ class QRBeamApp {
 
       this.isAudioReceiving = true;
       this.dom.audioRxPlaceholder.style.display = 'none';
+      if (this.dom.audioRxHud) this.dom.audioRxHud.style.display = 'flex';
       this.dom.btnStopAudioRx.style.display = 'flex';
       this.dom.receiverStatus.classList.add('active');
       this.dom.receiverStatus.querySelector('.status-text').innerText = 'Listening for Modem Tones';
@@ -1174,7 +1183,7 @@ class QRBeamApp {
       this.audioReceiverLoop();
 
     } catch (e) {
-      alert('Microphone access denied or unsupported.');
+      alert('Microphone access denied or unsupported: ' + e);
     }
   }
 
@@ -1188,8 +1197,9 @@ class QRBeamApp {
       cancelAnimationFrame(this.audioRxAnimId);
       this.audioRxAnimId = null;
     }
-    this.dom.audioRxPlaceholder.style.display = 'flex';
-    this.dom.btnStopAudioRx.style.display = 'none';
+    if (this.dom.audioRxPlaceholder) this.dom.audioRxPlaceholder.style.display = 'flex';
+    if (this.dom.audioRxHud) this.dom.audioRxHud.style.display = 'none';
+    if (this.dom.btnStopAudioRx) this.dom.btnStopAudioRx.style.display = 'none';
     this.dom.receiverStatus.classList.remove('active');
     this.dom.receiverStatus.querySelector('.status-text').innerText = 'Standby';
   }
@@ -1201,17 +1211,53 @@ class QRBeamApp {
     const dataArray = new Uint8Array(bufferLength);
     this.audioRxAnalyser.getByteFrequencyData(dataArray);
 
+    const sampleRate = this.audioRxCtx.sampleRate || 44100;
+    const binSize = sampleRate / this.audioRxAnalyser.fftSize;
+
+    // Find peak frequency
+    let maxVal = 0;
+    let maxBin = 0;
+    for (let i = 0; i < bufferLength; i++) {
+      if (dataArray[i] > maxVal) {
+        maxVal = dataArray[i];
+        maxBin = i;
+      }
+    }
+
+    const peakFreq = Math.round(maxBin * binSize);
+
+    if (this.dom.audioRxSignalLabel) {
+      if (maxVal > 150) {
+        if (Math.abs(peakFreq - 1000) < 150) {
+          this.dom.audioRxSignalLabel.innerText = `Preamble Detected (${peakFreq} Hz)`;
+          this.dom.recSpeed.innerText = 'Sync Lock';
+        } else if (Math.abs(peakFreq - 1400) < 150) {
+          this.dom.audioRxSignalLabel.innerText = `Space Tone 0 (${peakFreq} Hz)`;
+          this.dom.recSpeed.innerText = 'FSK Bit 0';
+        } else if (Math.abs(peakFreq - 2000) < 150) {
+          this.dom.audioRxSignalLabel.innerText = `Mark Tone 1 (${peakFreq} Hz)`;
+          this.dom.recSpeed.innerText = 'FSK Bit 1';
+        } else {
+          this.dom.audioRxSignalLabel.innerText = `Carrier: ${peakFreq} Hz`;
+        }
+      } else {
+        this.dom.audioRxSignalLabel.innerText = 'Listening for audio tone...';
+        this.dom.recSpeed.innerText = 'Mic Active';
+      }
+    }
+
+    // Render Canvas
     const canvas = this.dom.audioRxCanvas;
     if (canvas) {
       const ctx = canvas.getContext('2d');
       ctx.fillStyle = '#111318';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      const barWidth = (canvas.width / bufferLength) * 2.5;
+      const barWidth = (canvas.width / bufferLength) * 3;
       let x = 0;
       for (let i = 0; i < bufferLength; i++) {
-        const barHeight = (dataArray[i] / 255) * canvas.height;
-        ctx.fillStyle = dataArray[i] > 180 ? '#7bdba3' : '#3d4758';
+        const barHeight = (dataArray[i] / 255) * (canvas.height - 40);
+        ctx.fillStyle = dataArray[i] > 160 ? '#7bdba3' : '#3d4758';
         ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
         x += barWidth + 1;
         if (x > canvas.width) break;
