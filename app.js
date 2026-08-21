@@ -1,5 +1,5 @@
 /**
- * QRBeam v3.3.0 - Universal Multi-Protocol Data Communicator
+ * QRBeam v3.3.2 - Universal Multi-Protocol Data Communicator
  * Protocols: Optical QR, Acoustic Audio Modem, Wi-Fi Direct P2P, Bluetooth BLE, NFC, Radio Serial
  */
 
@@ -43,6 +43,12 @@ class QRBeamApp {
     this.audioRxAnalyser = null;
     this.isAudioReceiving = false;
     this.audioRxAnimId = null;
+
+    // Audio Demodulator Bit Buffer
+    this.audioBitBuffer = [];
+    this.audioPacketCharBuffer = '';
+    this.audioLastToneTime = 0;
+    this.audioInPacket = false;
 
     // Bluetooth BLE State
     this.bleDevice = null;
@@ -499,9 +505,11 @@ class QRBeamApp {
     if (mode === 'camera' && this.dom.recModeCamera) {
       this.dom.recModeCamera.classList.add('active');
       this.dom.cameraViewfinderBox.style.display = 'flex';
+      this.startCamera();
     } else if (mode === 'audio' && this.dom.recModeAudio) {
       this.dom.recModeAudio.classList.add('active');
       this.dom.audioRxBox.style.display = 'flex';
+      this.startAudioReceiver();
     } else if (mode === 'ble' && this.dom.recModeBle) {
       this.dom.recModeBle.classList.add('active');
       this.dom.hardwareRxBox.style.display = 'flex';
@@ -921,7 +929,7 @@ class QRBeamApp {
     const PREAMBLE_FREQ = 1000;
     const SPACE_FREQ = 1400;
     const MARK_FREQ = 2000;
-    const BIT_DURATION = 0.025;
+    const BIT_DURATION = 0.030;
 
     const osc = this.audioCtx.createOscillator();
     const gain = this.audioCtx.createGain();
@@ -935,23 +943,27 @@ class QRBeamApp {
 
     let time = this.audioCtx.currentTime;
 
+    // Preamble Tone
     osc.frequency.setValueAtTime(PREAMBLE_FREQ, time);
-    time += 0.15;
+    time += 0.20;
 
     const enc = new TextEncoder();
     const bytes = enc.encode(packetStr + '\n');
 
     for (let b = 0; b < bytes.length; b++) {
       const byteVal = bytes[b];
+      // Start Bit (0)
       osc.frequency.setValueAtTime(SPACE_FREQ, time);
       time += BIT_DURATION;
 
+      // 8 Data Bits
       for (let i = 0; i < 8; i++) {
         const bit = (byteVal >> i) & 1;
         osc.frequency.setValueAtTime(bit ? MARK_FREQ : SPACE_FREQ, time);
         time += BIT_DURATION;
       }
 
+      // Stop Bit (1)
       osc.frequency.setValueAtTime(MARK_FREQ, time);
       time += BIT_DURATION;
 
@@ -1046,7 +1058,7 @@ class QRBeamApp {
     }
   }
 
-  /* ================= WEB NFC BEAM (TAP TO TRANSFER) ================= */
+  /* ================= WEB NFC BEAM ================= */
   async startNfcSender(payloadStr) {
     if (!('NDEFReader' in window)) {
       console.warn('Web NFC not supported on this device.');
@@ -1150,16 +1162,31 @@ class QRBeamApp {
   /* ================= ACOUSTIC AUDIO MODEM RECEIVER ================= */
   async startAudioReceiver() {
     try {
-      this.audioRxCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (this.audioRxCtx.state === 'suspended') {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!this.audioRxCtx && AudioCtx) {
+        this.audioRxCtx = new AudioCtx();
+      }
+      if (this.audioRxCtx && this.audioRxCtx.state === 'suspended') {
         await this.audioRxCtx.resume();
       }
 
-      this.audioRxStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Microphone access is not supported on this browser or origin is not HTTPS.');
+        return;
+      }
+
+      this.audioRxStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false
+        }
+      });
       
       const source = this.audioRxCtx.createMediaStreamSource(this.audioRxStream);
       this.audioRxAnalyser = this.audioRxCtx.createAnalyser();
       this.audioRxAnalyser.fftSize = 2048;
+      this.audioRxAnalyser.smoothingTimeConstant = 0.2;
 
       source.connect(this.audioRxAnalyser);
 
@@ -1173,7 +1200,8 @@ class QRBeamApp {
       this.audioReceiverLoop();
 
     } catch (e) {
-      alert('Microphone access denied or unsupported: ' + e);
+      alert('Microphone permission required: ' + (e.message || e));
+      if (this.dom.audioRxPlaceholder) this.dom.audioRxPlaceholder.style.display = 'flex';
     }
   }
 
@@ -1201,34 +1229,38 @@ class QRBeamApp {
     const dataArray = new Uint8Array(bufferLength);
     this.audioRxAnalyser.getByteFrequencyData(dataArray);
 
-    const sampleRate = this.audioRxCtx.sampleRate || 44100;
-    const binSize = sampleRate / this.audioRxAnalyser.fftSize;
+    const sampleRate = this.audioRxCtx ? this.audioRxCtx.sampleRate : 44100;
+    const binSize = sampleRate / (this.audioRxAnalyser.fftSize || 2048);
 
-    // Find peak frequency
-    let maxVal = 0;
-    let maxBin = 0;
-    for (let i = 0; i < bufferLength; i++) {
-      if (dataArray[i] > maxVal) {
-        maxVal = dataArray[i];
-        maxBin = i;
+    // Calculate energy at key frequencies
+    const getEnergyAt = (targetFreq) => {
+      const bin = Math.round(targetFreq / binSize);
+      let sum = 0;
+      for (let i = Math.max(0, bin - 2); i <= Math.min(bufferLength - 1, bin + 2); i++) {
+        sum += dataArray[i];
       }
-    }
+      return sum / 5;
+    };
 
-    const peakFreq = Math.round(maxBin * binSize);
+    const energyPreamble = getEnergyAt(1000);
+    const energySpace = getEnergyAt(1400); // 0
+    const energyMark = getEnergyAt(2000);  // 1
+
+    const maxEnergy = Math.max(energyPreamble, energySpace, energyMark);
 
     if (this.dom.audioRxSignalLabel) {
-      if (maxVal > 150) {
-        if (Math.abs(peakFreq - 1000) < 150) {
-          this.dom.audioRxSignalLabel.innerText = `Preamble Detected (${peakFreq} Hz)`;
+      if (maxEnergy > 100) {
+        if (energyPreamble === maxEnergy) {
+          this.dom.audioRxSignalLabel.innerText = `Preamble Sync (1000 Hz)`;
           this.dom.recSpeed.innerText = 'Sync Lock';
-        } else if (Math.abs(peakFreq - 1400) < 150) {
-          this.dom.audioRxSignalLabel.innerText = `Space Tone 0 (${peakFreq} Hz)`;
+          this.audioInPacket = true;
+          this.audioBitBuffer = [];
+        } else if (energySpace === maxEnergy) {
+          this.dom.audioRxSignalLabel.innerText = `Space Tone 0 (1400 Hz)`;
           this.dom.recSpeed.innerText = 'FSK Bit 0';
-        } else if (Math.abs(peakFreq - 2000) < 150) {
-          this.dom.audioRxSignalLabel.innerText = `Mark Tone 1 (${peakFreq} Hz)`;
+        } else if (energyMark === maxEnergy) {
+          this.dom.audioRxSignalLabel.innerText = `Mark Tone 1 (2000 Hz)`;
           this.dom.recSpeed.innerText = 'FSK Bit 1';
-        } else {
-          this.dom.audioRxSignalLabel.innerText = `Carrier: ${peakFreq} Hz`;
         }
       } else {
         this.dom.audioRxSignalLabel.innerText = 'Listening for audio tone...';
@@ -1236,7 +1268,7 @@ class QRBeamApp {
       }
     }
 
-    // Render Canvas
+    // Render Canvas Spectrogram
     const canvas = this.dom.audioRxCanvas;
     if (canvas) {
       const ctx = canvas.getContext('2d');
@@ -1320,7 +1352,7 @@ class QRBeamApp {
       this.receiverScanLoop();
 
     } catch (err) {
-      alert('Camera access denied. Use 4-digit pair code.');
+      alert('Camera access error: ' + (err.message || err));
       this.dom.cameraPlaceholder.style.display = 'flex';
     }
   }
