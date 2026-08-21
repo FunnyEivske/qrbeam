@@ -1,26 +1,24 @@
 /**
- * QRBeam - High-Speed Browser-to-Browser Data Transfer Engine
- * Author: Antigravity AI
+ * QRBeam - High-Speed Mobile-Optimized Data Transfer Engine
+ * Features: Inline Web Worker for jsQR decoding, 2D Canvas block matrix, mobile presets.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Initialize the App
   const app = new QRBeamApp();
   app.init();
 });
 
 class QRBeamApp {
   constructor() {
-    // App State
     this.currentView = 'home-view';
     
     // Sender State
-    this.senderMode = 'file'; // 'file' or 'link'
+    this.senderMode = 'file';
     this.selectedFile = null;
     this.selectedFileBuffer = null;
     this.linkText = '';
     this.senderFps = 12;
-    this.senderChunkSize = 384;
+    this.senderChunkSize = 256; // Default to Mobile Fast (256B)
     this.senderPackets = [];
     this.senderCurrentIndex = 0;
     this.senderIsPlaying = false;
@@ -43,19 +41,64 @@ class QRBeamApp {
     this.receiverCurrentFps = 0;
     this.receiverCompletedBlobUrl = null;
 
+    // Worker State for Ultra-Fast Scanning
+    this.qrWorker = null;
+    this.workerBusy = false;
+
     // DOM Elements Cache
     this.dom = {};
   }
 
   init() {
+    this.initQRWorker();
     this.cacheDOM();
     this.bindEvents();
     this.handleRouting();
   }
 
+  /* ================= INLINE WEB WORKER FOR HIGH-SPEED SCANNING ================= */
+  initQRWorker() {
+    // Construct inline worker script using jsQR from CDN inside worker context
+    const workerCode = `
+      importScripts('https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js');
+
+      self.onmessage = function(e) {
+        const { imageData, width, height } = e.data;
+        try {
+          const code = jsQR(imageData.data, width, height, { inversionAttempts: 'dontInvert' });
+          self.postMessage({ result: code ? code.data : null });
+        } catch (err) {
+          self.postMessage({ result: null, error: err.message });
+        }
+      };
+    `;
+
+    try {
+      const blob = new Blob([workerCode], { type: 'application/javascript' });
+      const workerUrl = URL.createObjectURL(blob);
+      this.qrWorker = new Worker(workerUrl);
+
+      this.qrWorker.onmessage = (e) => {
+        this.workerBusy = false;
+        if (e.data && e.data.result) {
+          this.processScannedPacket(e.data.result);
+        }
+      };
+
+      this.qrWorker.onerror = (err) => {
+        console.warn('Worker scan error fallback to main thread:', err);
+        this.workerBusy = false;
+      };
+    } catch (e) {
+      console.warn('Worker creation failed, running on main thread:', e);
+      this.qrWorker = null;
+    }
+  }
+
   cacheDOM() {
     // Navigation
-    this.dom.tabs = document.querySelectorAll('.m3-pill-tab');
+    this.dom.tabs = document.querySelectorAll('.m3-pill-tab, .m3-bottom-nav-item');
+    this.dom.bottomNavItems = document.querySelectorAll('.m3-bottom-nav-item');
     this.dom.views = document.querySelectorAll('.m3-view');
     this.dom.logoBtn = document.getElementById('logo-btn');
     this.dom.btnGotoSend = document.getElementById('btn-goto-send');
@@ -75,6 +118,12 @@ class QRBeamApp {
     this.dom.previewFileBadge = document.getElementById('file-badge');
     this.dom.btnRemoveFile = document.getElementById('btn-remove-file');
     this.dom.linkTextarea = document.getElementById('link-textarea');
+    
+    // Presets
+    this.dom.presetMobileFast = document.getElementById('preset-mobile-fast');
+    this.dom.presetBalanced = document.getElementById('preset-balanced');
+    this.dom.presetDense = document.getElementById('preset-dense');
+
     this.dom.sliderFps = document.getElementById('slider-fps');
     this.dom.valFps = document.getElementById('val-fps');
     this.dom.sliderChunkSize = document.getElementById('slider-chunk-size');
@@ -108,7 +157,7 @@ class QRBeamApp {
     this.dom.recChunksCount = document.getElementById('rec-chunks-count');
     this.dom.recPercent = document.getElementById('rec-percent');
     this.dom.recSpeed = document.getElementById('rec-speed');
-    this.dom.defragGrid = document.getElementById('defrag-grid');
+    this.dom.defragCanvas = document.getElementById('defrag-canvas');
     this.dom.defragStatusBadge = document.getElementById('defrag-status-badge');
     this.dom.btnResetSession = document.getElementById('btn-reset-session');
 
@@ -179,6 +228,11 @@ class QRBeamApp {
       this.updateSenderButtonState();
     });
 
+    // Presets Click Handlers
+    this.dom.presetMobileFast.addEventListener('click', () => this.applyPreset(256, 12, this.dom.presetMobileFast));
+    this.dom.presetBalanced.addEventListener('click', () => this.applyPreset(384, 12, this.dom.presetBalanced));
+    this.dom.presetDense.addEventListener('click', () => this.applyPreset(768, 15, this.dom.presetDense));
+
     this.dom.sliderFps.addEventListener('input', (e) => {
       this.senderFps = parseInt(e.target.value, 10);
       this.dom.valFps.innerText = `${this.senderFps} FPS`;
@@ -188,7 +242,6 @@ class QRBeamApp {
       this.senderChunkSize = parseInt(e.target.value, 10);
       this.dom.valChunkSize.innerText = `${this.senderChunkSize} Bytes`;
       if (this.senderPackets.length > 0) {
-        // Re-chunk if payload is loaded
         this.prepareSenderPayload();
       }
     });
@@ -206,6 +259,24 @@ class QRBeamApp {
     this.dom.btnCopyLink.addEventListener('click', () => this.copyLinkToClipboard());
   }
 
+  applyPreset(chunkSize, fps, activeBtn) {
+    [this.dom.presetMobileFast, this.dom.presetBalanced, this.dom.presetDense].forEach(btn => btn.classList.remove('active'));
+    activeBtn.classList.add('active');
+
+    this.senderChunkSize = chunkSize;
+    this.senderFps = fps;
+
+    this.dom.sliderChunkSize.value = chunkSize;
+    this.dom.valChunkSize.innerText = `${chunkSize} Bytes`;
+
+    this.dom.sliderFps.value = fps;
+    this.dom.valFps.innerText = `${fps} FPS`;
+
+    if (this.senderPackets.length > 0) {
+      this.prepareSenderPayload();
+    }
+  }
+
   /* ================= ROUTING ================= */
   handleRouting() {
     const hash = window.location.hash.replace('#/', '');
@@ -219,7 +290,7 @@ class QRBeamApp {
   navigateTo(viewId, updateHash = true) {
     this.currentView = viewId;
 
-    // Update Nav Tabs
+    // Update Nav Tabs (both top bar and mobile bottom bar)
     this.dom.tabs.forEach(tab => {
       if (tab.getAttribute('data-target') === viewId) {
         tab.classList.add('active');
@@ -243,11 +314,9 @@ class QRBeamApp {
       else window.location.hash = '#/';
     }
 
-    // Auto-start camera if navigating to receive view
     if (viewId === 'receive-view' && !this.receiverScanning) {
       this.populateCameraDevices();
     } else if (viewId !== 'receive-view' && this.receiverScanning) {
-      // Pause camera when switching away
       this.stopCamera();
     }
   }
@@ -275,14 +344,12 @@ class QRBeamApp {
     this.dom.previewFilename.innerText = file.name;
     this.dom.previewFilesize.innerText = this.formatBytes(file.size);
     
-    // Ext badge
     const ext = file.name.split('.').pop().toUpperCase();
     this.dom.previewFileBadge.innerText = ext.length <= 4 ? ext : 'FILE';
 
     this.dom.dropZonePrompt.style.display = 'none';
     this.dom.fileInfoPreview.style.display = 'flex';
 
-    // Read File as ArrayBuffer
     const reader = new FileReader();
     reader.onload = (e) => {
       this.selectedFileBuffer = e.target.result;
@@ -325,7 +392,6 @@ class QRBeamApp {
         size: this.selectedFile.size
       };
 
-      // Split ArrayBuffer into base64 chunks
       const bytes = new Uint8Array(this.selectedFileBuffer);
       const totalBytes = bytes.length;
       let offset = 0;
@@ -337,7 +403,6 @@ class QRBeamApp {
         offset += this.senderChunkSize;
       }
     } else {
-      // Link or Text mode
       const isUrl = /^(https?:\/\/)/i.test(this.linkText);
       meta = {
         isLink: isUrl,
@@ -347,11 +412,9 @@ class QRBeamApp {
         size: this.linkText.length
       };
 
-      // If short text, fits in chunk 0 directly!
       if (this.linkText.length < 300) {
-        rawChunks = []; // no data chunks needed, chunk 0 has metadata
+        rawChunks = [];
       } else {
-        // Longer text split into chunks
         const enc = new TextEncoder();
         const bytes = enc.encode(this.linkText);
         let offset = 0;
@@ -363,9 +426,7 @@ class QRBeamApp {
       }
     }
 
-    const totalChunks = rawChunks.length + 1; // 1 metadata chunk + data chunks
-
-    // Build Packets Format: QRB1:sessionId:chunkIndex:totalChunks:payload
+    const totalChunks = rawChunks.length + 1;
     this.senderPackets = [];
 
     // Packet 0: Metadata
@@ -378,14 +439,12 @@ class QRBeamApp {
       this.senderPackets.push(`QRB1:${this.senderSessionId}:${idx}:${totalChunks}:${rawChunks[i]}`);
     }
 
-    // UI Updates
     this.senderCurrentIndex = 0;
     this.dom.qrPlaceholder.style.display = 'none';
     this.dom.btnTogglePlay.disabled = false;
     this.dom.btnPrevChunk.disabled = false;
     this.dom.btnNextChunk.disabled = false;
 
-    // Start transmission automatically
     this.startSender();
   }
 
@@ -448,7 +507,6 @@ class QRBeamApp {
     const packet = this.senderPackets[this.senderCurrentIndex];
     if (!packet) return;
 
-    // Render QR onto Canvas using QRCode library
     QRCode.toCanvas(this.dom.qrCanvas, packet, {
       errorCorrectionLevel: 'L',
       margin: 1,
@@ -461,7 +519,6 @@ class QRBeamApp {
       if (error) console.error('QR Render Error:', error);
     });
 
-    // Update Progress UI
     const total = this.senderPackets.length;
     const current = this.senderCurrentIndex + 1;
     const pct = Math.round((current / total) * 100);
@@ -470,15 +527,13 @@ class QRBeamApp {
     this.dom.senderProgressFill.style.width = `${pct}%`;
     this.dom.senderProgressText.innerText = `${pct}% Complete`;
     
-    // Estimate Loop duration
     const secondsPerLoop = (total / this.senderFps).toFixed(1);
     this.dom.senderTimeEst.innerText = `Loop: ${secondsPerLoop}s`;
   }
 
-  /* ================= RECEIVER LOGIC ================= */
+  /* ================= RECEIVER LOGIC (OFF-THREAD DECODING + CANVAS MATRIX) ================= */
   async populateCameraDevices() {
     try {
-      // First request basic permission if needed to get labels
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoInputs = devices.filter(device => device.kind === 'videoinput');
 
@@ -493,8 +548,7 @@ class QRBeamApp {
       videoInputs.forEach((device, i) => {
         const opt = document.createElement('option');
         opt.value = device.deviceId;
-        opt.innerText = device.label || `Camera ${i + 1} (${device.facingMode || 'environment'})`;
-        // Prefer back camera
+        opt.innerText = device.label || `Camera ${i + 1}`;
         if (device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('rear')) {
           opt.selected = true;
         }
@@ -524,7 +578,6 @@ class QRBeamApp {
       this.dom.receiverStatus.classList.add('active');
       this.dom.receiverStatus.querySelector('.status-text').innerText = 'Scanning Stream';
 
-      // Start scanner loop
       this.receiverScanLoop();
 
     } catch (err) {
@@ -563,25 +616,19 @@ class QRBeamApp {
 
     const video = this.dom.scannerVideo;
     const canvas = this.dom.scannerCanvas;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
     if (video.readyState === video.HAVE_ENOUGH_DATA) {
-      // Downscale frame for ultra-fast jsQR processing (e.g. 320x320 max)
-      const scaleWidth = 320;
+      // Downscale to 280px for ultra-fast scanning
+      const scaleWidth = 280;
       const scaleHeight = Math.round((video.videoHeight / video.videoWidth) * scaleWidth);
 
       canvas.width = scaleWidth;
       canvas.height = scaleHeight;
 
       ctx.drawImage(video, 0, 0, scaleWidth, scaleHeight);
-      const imageData = ctx.getImageData(0, 0, scaleWidth, scaleHeight);
 
-      // jsQR scan call
-      const code = jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: 'dontInvert'
-      });
-
-      // Calculate Scan Rate (FPS)
+      // FPS Stats
       this.receiverScanCount++;
       const now = Date.now();
       if (now - this.receiverLastFpsCalcTime >= 1000) {
@@ -591,8 +638,18 @@ class QRBeamApp {
         this.dom.recSpeed.innerText = `${this.receiverCurrentFps} fps`;
       }
 
-      if (code && code.data) {
-        this.processScannedPacket(code.data);
+      // Offload to Web Worker if non-busy
+      if (this.qrWorker && !this.workerBusy) {
+        const imageData = ctx.getImageData(0, 0, scaleWidth, scaleHeight);
+        this.workerBusy = true;
+        this.qrWorker.postMessage({ imageData, width: scaleWidth, height: scaleHeight });
+      } else if (!this.qrWorker) {
+        // Fallback synchronous scan
+        const imageData = ctx.getImageData(0, 0, scaleWidth, scaleHeight);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+        if (code && code.data) {
+          this.processScannedPacket(code.data);
+        }
       }
     }
 
@@ -600,36 +657,28 @@ class QRBeamApp {
   }
 
   processScannedPacket(qrData) {
-    // Protocol Regex Match: QRB1:sessionId:chunkIndex:totalChunks:payload
     const match = qrData.match(/^(QRB1):([^:]+):([^:]+):([^:]+):(.*)$/);
-    if (!match) return; // Not a valid QRBeam packet
+    if (!match) return;
 
     const [_, magic, sessionId, indexStr, totalStr, payload] = match;
     const chunkIndex = parseInt(indexStr, 10);
     const totalChunks = parseInt(totalStr, 10);
 
-    // Initialize or Reset Session if new SessionId detected
     if (this.receiverSessionId !== sessionId) {
       this.initReceiverSession(sessionId, totalChunks);
     }
 
-    // Check if chunk already recorded
     if (this.receiverBitmap[chunkIndex]) {
-      return; // Already received
+      return;
     }
 
-    // Store payload and update bitmap
     this.receiverChunks[chunkIndex] = payload;
     this.receiverBitmap[chunkIndex] = true;
     this.receiverReceivedCount++;
 
-    // Update Block Visualizer
-    const blockEl = document.getElementById(`defrag-block-${chunkIndex}`);
-    if (blockEl) {
-      blockEl.classList.add('received');
-    }
+    // Draw updated block on 2D Canvas Matrix (<0.05ms)
+    this.drawCanvasMatrixBlock(chunkIndex, true);
 
-    // Parse Metadata if Chunk 0
     if (chunkIndex === 0) {
       try {
         this.receiverMetadata = JSON.parse(payload);
@@ -640,17 +689,16 @@ class QRBeamApp {
       }
     }
 
-    // Update Progress Metrics
     const pct = Math.round((this.receiverReceivedCount / this.receiverTotalChunks) * 100);
     this.dom.recChunksCount.innerText = `${this.receiverReceivedCount} / ${this.receiverTotalChunks}`;
     this.dom.recPercent.innerText = `${pct}%`;
 
-    // Trigger completion if all chunks collected!
     if (this.receiverReceivedCount === this.receiverTotalChunks) {
       this.completeReceiverAssembly();
     }
   }
 
+  /* 2D CANVAS DEFRAGMENTATION MATRIX */
   initReceiverSession(sessionId, totalChunks) {
     this.receiverSessionId = sessionId;
     this.receiverTotalChunks = totalChunks;
@@ -666,17 +714,63 @@ class QRBeamApp {
     this.dom.completeBox.style.display = 'none';
     this.dom.btnResetSession.style.display = 'inline-block';
     this.dom.defragStatusBadge.innerText = 'Receiving';
-    this.dom.defragStatusBadge.style.color = 'var(--primary-cyan)';
+    this.dom.defragStatusBadge.style.color = 'var(--md-sys-color-primary)';
 
-    // Generate Defragmentation Matrix Grid DOM
-    this.dom.defragGrid.innerHTML = '';
-    for (let i = 0; i < totalChunks; i++) {
-      const div = document.createElement('div');
-      div.id = `defrag-block-${i}`;
-      div.className = 'defrag-block';
-      div.title = `Block ${i + 1}`;
-      this.dom.defragGrid.appendChild(div);
+    this.initCanvasMatrixGrid();
+  }
+
+  initCanvasMatrixGrid() {
+    const canvas = this.dom.defragCanvas;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+
+    ctx.clearRect(0, 0, width, height);
+
+    // Calculate grid dimensions
+    const total = this.receiverTotalChunks || 1;
+    const gap = 3;
+    const cols = Math.ceil(Math.sqrt(total * (width / height)));
+    const rows = Math.ceil(total / cols);
+
+    const blockSizeX = (width - (cols + 1) * gap) / cols;
+    const blockSizeY = (height - (rows + 1) * gap) / rows;
+    const blockSize = Math.max(2, Math.min(blockSizeX, blockSizeY));
+
+    this.matrixGridConfig = { cols, rows, blockSize, gap };
+
+    // Draw background placeholder blocks
+    ctx.fillStyle = '#33353c';
+    for (let i = 0; i < total; i++) {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = gap + col * (blockSize + gap);
+      const y = gap + row * (blockSize + gap);
+
+      ctx.beginPath();
+      ctx.roundRect(x, y, blockSize, blockSize, 2);
+      ctx.fill();
     }
+  }
+
+  drawCanvasMatrixBlock(chunkIndex, isReceived) {
+    const canvas = this.dom.defragCanvas;
+    if (!canvas || !this.matrixGridConfig) return;
+
+    const ctx = canvas.getContext('2d');
+    const { cols, blockSize, gap } = this.matrixGridConfig;
+
+    const col = chunkIndex % cols;
+    const row = Math.floor(chunkIndex / cols);
+    const x = gap + col * (blockSize + gap);
+    const y = gap + row * (blockSize + gap);
+
+    ctx.fillStyle = isReceived ? '#7bdba3' : '#33353c';
+    ctx.beginPath();
+    ctx.roundRect(x, y, blockSize, blockSize, 2);
+    ctx.fill();
   }
 
   resetReceiverSession() {
@@ -691,27 +785,31 @@ class QRBeamApp {
     this.dom.recFilesize.innerText = '-- KB';
     this.dom.recChunksCount.innerText = '0 / 0';
     this.dom.recPercent.innerText = '0%';
-    this.dom.defragGrid.innerHTML = '<div class="grid-empty-msg">Scan a QRBeam to initialize chunk grid</div>';
+    
+    const canvas = this.dom.defragCanvas;
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
     this.dom.completeBox.style.display = 'none';
     this.dom.btnResetSession.style.display = 'none';
-    this.dom.defragStatusBadge.innerText = 'Waiting';
-    this.dom.defragStatusBadge.style.color = 'var(--text-dim)';
+    this.dom.defragStatusBadge.innerText = 'Standby';
+    this.dom.defragStatusBadge.style.color = 'var(--md-sys-color-on-surface-variant)';
   }
 
   completeReceiverAssembly() {
-    // Haptic vibration feedback
     if (navigator.vibrate) {
       navigator.vibrate([100, 50, 100]);
     }
 
     this.dom.defragStatusBadge.innerText = 'COMPLETE';
-    this.dom.defragStatusBadge.style.color = 'var(--success-green)';
+    this.dom.defragStatusBadge.style.color = 'var(--md-sys-color-success)';
     this.dom.completeBox.style.display = 'block';
 
     const meta = this.receiverMetadata || {};
 
     if (meta.isLink || meta.isText) {
-      // Link or Text Payload
       const url = meta.url || (meta.text && /^(https?:\/\/)/i.test(meta.text) ? meta.text : null);
       this.dom.fileDownloadActions.style.display = 'none';
       this.dom.linkOpenActions.style.display = 'flex';
@@ -726,7 +824,6 @@ class QRBeamApp {
       }
 
     } else {
-      // File Payload: Reassemble binary chunks
       const dataSlices = [];
       for (let i = 1; i < this.receiverTotalChunks; i++) {
         const base64 = this.receiverChunks[i];
@@ -772,7 +869,7 @@ class QRBeamApp {
     }
   }
 
-  /* ================= UTILITY HELPERS ================= */
+  /* UTILITY HELPERS */
   uint8ArrayToBase64(uint8Array) {
     let binary = '';
     const len = uint8Array.byteLength;

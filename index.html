@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QRBeam - Material 3 Expressive Data Transfer</title>
-  <meta name="description" content="Transfer files and links between any device using high-speed repeating QR codes and camera scanning. Material 3 Expressive Edition.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>QRBeam - Material 3 Mobile-Optimized Data Transfer</title>
+  <meta name="description" content="Transfer files and links between any device using high-speed repeating QR codes and camera scanning. Material 3 Expressive Mobile Edition.">
   
   <!-- Google Fonts: Plus Jakarta Sans & Material Symbols -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -30,7 +30,7 @@
 
   <div class="m3-app-shell">
     
-    <!-- Material 3 Expressive Top App Bar -->
+    <!-- Material 3 Expressive Desktop Top App Bar -->
     <header class="m3-top-app-bar">
       <div class="m3-brand" id="logo-btn">
         <div class="m3-brand-icon">
@@ -38,12 +38,12 @@
         </div>
         <div class="m3-brand-title">
           <span class="title-main">QR<span class="title-accent">Beam</span></span>
-          <span class="m3-chip-expressive">M3 EXPRESSIVE</span>
+          <span class="m3-chip-expressive">M3 MOBILE</span>
         </div>
       </div>
 
-      <!-- M3 Expressive Navigation Segmented Pills -->
-      <nav class="m3-nav-pills">
+      <!-- M3 Expressive Desktop Navigation Segmented Pills -->
+      <nav class="m3-nav-pills desktop-only">
         <button class="m3-pill-tab active" id="tab-home" data-target="home-view">
           <span class="material-symbols-outlined icon-inactive">home</span>
           <span class="material-symbols-outlined icon-active">home</span>
@@ -135,15 +135,15 @@
             <div class="m3-feature-chip">
               <span class="material-symbols-outlined">bolt</span>
               <div>
-                <strong>High Speed</strong>
-                <p>Custom burst protocol transferring up to 30 FPS.</p>
+                <strong>High Speed Engine</strong>
+                <p>Off-thread worker decoding up to 30+ FPS.</p>
               </div>
             </div>
             <div class="m3-feature-chip">
-              <span class="material-symbols-outlined">devices</span>
+              <span class="material-symbols-outlined">phone_iphone</span>
               <div>
-                <strong>Universal Support</strong>
-                <p>Runs in any browser on PC, Mac, Android, or iOS.</p>
+                <strong>Mobile Optimized</strong>
+                <p>Tailored layouts and low-density QR options for phones.</p>
               </div>
             </div>
           </div>
@@ -182,9 +182,9 @@
                     <div class="m3-drop-icon">
                       <span class="material-symbols-outlined">cloud_upload</span>
                     </div>
-                    <h4 class="m3-title-medium">Drag & Drop file here</h4>
-                    <p class="m3-body-small">or tap to browse files</p>
-                    <span class="m3-label-small">Recommended size under 1.5 MB</span>
+                    <h4 class="m3-title-medium">Tap or Drag File Here</h4>
+                    <p class="m3-body-small">Select any file to encode</p>
+                    <span class="m3-label-small">Works best under 5 MB for optical transfer</span>
                   </div>
 
                   <!-- File Selected Banner -->
@@ -209,9 +209,23 @@
                 </div>
               </div>
 
-              <!-- Expressive Slider Configurations -->
+              <!-- Speed & Density Presets for Mobile -->
               <div class="m3-config-box">
-                <div class="m3-config-heading">Transmission Controls</div>
+                <div class="m3-config-heading">Preset Optimization</div>
+                <div class="m3-presets-row">
+                  <button class="m3-chip-preset active" id="preset-mobile-fast">
+                    <span class="material-symbols-outlined">smartphone</span>
+                    <span>Mobile Fast (256B)</span>
+                  </button>
+                  <button class="m3-chip-preset" id="preset-balanced">
+                    <span class="material-symbols-outlined">balance</span>
+                    <span>Balanced (384B)</span>
+                  </button>
+                  <button class="m3-chip-preset" id="preset-dense">
+                    <span class="material-symbols-outlined">grid_view</span>
+                    <span>Dense (768B)</span>
+                  </button>
+                </div>
 
                 <!-- Speed Slider -->
                 <div class="m3-slider-group">
@@ -221,22 +235,22 @@
                   </div>
                   <input type="range" id="slider-fps" min="2" max="25" value="12" step="1" class="m3-slider">
                   <div class="m3-slider-ticks">
-                    <span>2 FPS (Slow)</span>
-                    <span>12 FPS (Default)</span>
-                    <span>25 FPS (Max)</span>
+                    <span>2 FPS</span>
+                    <span>12 FPS (Recommended)</span>
+                    <span>25 FPS</span>
                   </div>
                 </div>
 
                 <!-- Chunk Size Slider -->
                 <div class="m3-slider-group">
                   <div class="m3-slider-label-row">
-                    <span class="m3-label-large">Chunk Size</span>
-                    <span class="m3-badge-value" id="val-chunk-size">384 Bytes</span>
+                    <span class="m3-label-large">Chunk Size (Bytes)</span>
+                    <span class="m3-badge-value" id="val-chunk-size">256 Bytes</span>
                   </div>
-                  <input type="range" id="slider-chunk-size" min="128" max="768" value="384" step="64" class="m3-slider">
+                  <input type="range" id="slider-chunk-size" min="128" max="768" value="256" step="64" class="m3-slider">
                   <div class="m3-slider-ticks">
-                    <span>128B (High Readability)</span>
-                    <span>384B</span>
+                    <span>128B (Easy Scan)</span>
+                    <span>256B</span>
                     <span>768B (Dense)</span>
                   </div>
                 </div>
@@ -262,16 +276,16 @@
                 <div class="m3-counter-pill" id="sender-chunk-badge">Chunk --/--</div>
               </div>
 
-              <!-- Expressive QR Stage -->
+              <!-- Responsive QR Stage -->
               <div class="m3-qr-frame">
                 <canvas id="qr-canvas" width="400" height="400"></canvas>
                 <div class="m3-qr-placeholder" id="qr-placeholder">
                   <span class="material-symbols-outlined placeholder-icon">qr_code_2</span>
-                  <p class="m3-body-medium">Select a payload to begin optical transmission</p>
+                  <p class="m3-body-medium">Select a payload to start transmission</p>
                 </div>
               </div>
 
-              <!-- M3 Expressive Linear Progress Indicator -->
+              <!-- M3 Progress Indicator -->
               <div class="m3-progress-wrapper">
                 <div class="m3-linear-progress">
                   <div class="m3-progress-indicator" id="sender-progress-fill" style="width: 0%;"></div>
@@ -282,7 +296,7 @@
                 </div>
               </div>
 
-              <!-- M3 Transport Control Bar -->
+              <!-- Transport Control Bar -->
               <div class="m3-transport-bar">
                 <button class="m3-icon-button" id="btn-prev-chunk" title="Previous Chunk" disabled>
                   <span class="material-symbols-outlined">skip_previous</span>
@@ -326,7 +340,7 @@
                 </div>
               </div>
 
-              <!-- Expressive Camera Viewfinder -->
+              <!-- Expressive Mobile Camera Viewfinder -->
               <div class="m3-viewfinder-container">
                 <video id="scanner-video" autoplay playsinline muted></video>
                 <canvas id="scanner-canvas" style="display:none;"></canvas>
@@ -343,13 +357,13 @@
                   <div class="m3-scan-hint" id="scan-prompt">Align QR code inside viewfinder</div>
                 </div>
 
-                <!-- Camera Permission / Off Overlay -->
+                <!-- Camera Off / Permission Overlay -->
                 <div class="m3-camera-off-overlay" id="camera-placeholder">
                   <div class="m3-camera-icon-bg">
                     <span class="material-symbols-outlined">photo_camera</span>
                   </div>
-                  <h3 class="m3-title-large">Camera Permission Required</h3>
-                  <p class="m3-body-medium">Allow camera access to scan optical QRBeam streams.</p>
+                  <h3 class="m3-title-large">Enable Camera</h3>
+                  <p class="m3-body-medium">Allow camera access to scan optical streams at high speed.</p>
                   <button class="m3-button m3-button-filled" id="btn-start-camera">
                     <span class="material-symbols-outlined">videocam</span>
                     <span>Enable Camera</span>
@@ -404,18 +418,18 @@
                 </div>
               </div>
 
-              <!-- M3 Expressive Block Matrix -->
+              <!-- Ultra High-Performance 2D Canvas Matrix -->
               <div class="m3-matrix-container">
                 <div class="matrix-header">
                   <span>Data Block Matrix</span>
                   <span id="defrag-status-badge" class="m3-matrix-badge">Standby</span>
                 </div>
-                <div class="m3-block-grid" id="defrag-grid">
-                  <div class="m3-grid-placeholder">Scan a QRBeam stream to generate chunk grid</div>
+                <div class="m3-canvas-grid-wrapper">
+                  <canvas id="defrag-canvas" width="600" height="200"></canvas>
                 </div>
               </div>
 
-              <!-- Transfer Completion Dialog Card -->
+              <!-- Completion Dialog Card -->
               <div class="m3-completion-card" id="complete-box" style="display: none;">
                 <div class="completion-hero-icon">
                   <span class="material-symbols-outlined">check_circle</span>
@@ -449,6 +463,31 @@
       </section>
 
     </main>
+
+    <!-- Material 3 Mobile Bottom Navigation Bar (Shown on Mobile Devices) -->
+    <nav class="m3-bottom-nav mobile-only">
+      <button class="m3-bottom-nav-item active" data-target="home-view">
+        <div class="nav-icon-pill">
+          <span class="material-symbols-outlined">home</span>
+        </div>
+        <span class="nav-label">Home</span>
+      </button>
+
+      <button class="m3-bottom-nav-item" data-target="send-view">
+        <div class="nav-icon-pill">
+          <span class="material-symbols-outlined">send</span>
+        </div>
+        <span class="nav-label">Send</span>
+      </button>
+
+      <button class="m3-bottom-nav-item" data-target="receive-view">
+        <div class="nav-icon-pill">
+          <span class="material-symbols-outlined">photo_camera</span>
+        </div>
+        <span class="nav-label">Receive</span>
+      </button>
+    </nav>
+
   </div>
 
   <!-- Application Engine Script -->
